@@ -129,7 +129,7 @@ def _build_template_commands(
                     is_flag=False,
                     choices=repr(enum_map[p.type]),
                     as_name=p.name,
-                    sdef_type=sdef_type,
+                    sdef_type="enum",
                 ))
             else:
                 params.append(TemplateParam(
@@ -187,6 +187,11 @@ def _build_template_properties(
 
 
 _PRIMITIVE_TYPES = frozenset({"text", "integer", "real", "boolean", "date", "double integer"})
+
+# Types that _format_value can reliably handle in AppleScript
+_SUPPORTED_TYPES = _PRIMITIVE_TYPES | frozenset({
+    "Unicode text", "string", "number", "file", "alias",
+})
 
 
 def _build_nested_groups(
@@ -250,6 +255,38 @@ def get_wrapper_info(sdef_info: SdefInfo) -> dict:
         "properties": properties,
         "nested_groups": nested_groups,
     }
+
+
+def check_command_support(sdef_info: SdefInfo) -> list[dict]:
+    """Analyze each command's parameter types and report support level.
+
+    Returns list of dicts with:
+      - name: command cli_name
+      - supported: True if all param types are handled
+      - issues: list of strings describing unsupported params
+    """
+    enum_map = _build_enum_map(sdef_info.enumerations)
+    results = []
+    for cmd in sdef_info.commands:
+        if not _should_include_command(cmd):
+            continue
+        issues = []
+        # Check direct parameter (skip optional ones — user can just omit them)
+        if cmd.direct_parameter and cmd.direct_parameter.type:
+            dp_type = cmd.direct_parameter.type
+            if not cmd.direct_parameter.optional:
+                if dp_type not in _SUPPORTED_TYPES and dp_type not in enum_map:
+                    issues.append(f"direct param type '{dp_type}'")
+        # Check named parameters
+        for p in cmd.parameters:
+            if p.type and p.type not in _SUPPORTED_TYPES and p.type not in enum_map:
+                issues.append(f"param '{p.name}' type '{p.type}'")
+        results.append({
+            "name": cmd.cli_name,
+            "supported": len(issues) == 0,
+            "issues": issues,
+        })
+    return results
 
 
 def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:

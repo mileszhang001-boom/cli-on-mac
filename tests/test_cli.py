@@ -108,6 +108,41 @@ class TestInfo:
         assert "Music" in result.output
 
 
+class TestDoctor:
+    def test_doctor_json_music(self, runner):
+        result = runner.invoke(cli, ["--json", "doctor", "music"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["app_id"] == "music"
+        assert data["total"] > 0
+        assert data["supported"] + data["unsupported"] == data["total"]
+        assert isinstance(data["commands"], list)
+
+    def test_doctor_json_has_supported_field(self, runner):
+        result = runner.invoke(cli, ["--json", "doctor", "music"])
+        data = json.loads(result.output)
+        for cmd in data["commands"]:
+            assert "supported" in cmd
+            assert "name" in cmd
+            assert isinstance(cmd["supported"], bool)
+
+    def test_doctor_human_mode(self, runner):
+        result = runner.invoke(cli, ["doctor", "music"])
+        assert result.exit_code == 0
+        assert "可靠性检查" in result.output
+
+    def test_doctor_not_found(self, runner):
+        result = runner.invoke(cli, ["doctor", "nonexistent_xyz"])
+        assert result.exit_code != 0
+
+    def test_info_json_has_supported_field(self, runner):
+        """clam info --json should include supported field per command."""
+        result = runner.invoke(cli, ["--json", "info", "music"])
+        data = json.loads(result.output)
+        for cmd in data["commands"]:
+            assert "supported" in cmd
+
+
 class TestList:
     def test_list_empty(self, runner):
         result = runner.invoke(cli, ["list"])

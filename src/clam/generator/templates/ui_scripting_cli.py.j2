@@ -38,6 +38,12 @@ def _run_applescript(script: str) -> str:
                 err=True,
             )
             sys.exit(1)
+        if "-1708" in stderr:
+            click.echo("Error: {{ app_name }} does not support this command.", err=True)
+            sys.exit(1)
+        if "-600" in stderr or "-10810" in stderr:
+            click.echo("Error: {{ app_name }} is not running.", err=True)
+            sys.exit(1)
         msg = stderr.split("execution error: ")[-1] if "execution error:" in stderr else stderr
         click.echo(f"Error: {msg}", err=True)
         sys.exit(1)
@@ -185,7 +191,8 @@ def quit_cmd(ctx: click.Context) -> None:
 @click.pass_context
 def open_file_cmd(ctx: click.Context, filepath: str) -> None:
     """用该应用打开文件"""
-    script = f'tell application "{{ app_name }}" to open POSIX file "{filepath}"'
+    escaped = filepath.replace('\\', '\\\\').replace('"', '\\"')
+    script = f'tell application "{{ app_name }}" to open POSIX file "{escaped}"'
     _run_applescript(script)
     click.echo(f"已用 {{ app_name }} 打开 {filepath}")
 

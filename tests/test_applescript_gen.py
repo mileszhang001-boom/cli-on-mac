@@ -5,7 +5,9 @@ from pathlib import Path
 
 from clam.generator.applescript_gen import (
     _should_include_command,
+    check_command_support,
     generate_wrapper,
+    generate_basic_wrapper,
 )
 
 
@@ -125,3 +127,104 @@ class TestCommandFiltering:
         )
         if search_cmd:
             assert _should_include_command(search_cmd) is True
+
+
+class TestFormatValueEscaping:
+    """Test that generated code properly escapes strings for AppleScript."""
+
+    def test_format_value_escapes_quotes(self, music_sdef_info):
+        with tempfile.TemporaryDirectory() as d:
+            generate_wrapper(music_sdef_info, Path(d))
+            code = (Path(d) / "cli_music.py").read_text()
+            # _format_value should handle text type with escaping
+            assert 'replace(\'"\',' in code or "replace('\"'," in code
+
+    def test_format_value_handles_boolean(self, music_sdef_info):
+        with tempfile.TemporaryDirectory() as d:
+            generate_wrapper(music_sdef_info, Path(d))
+            code = (Path(d) / "cli_music.py").read_text()
+            assert '"true"' in code or "'true'" in code  # boolean check
+
+    def test_format_value_handles_file_type(self, music_sdef_info):
+        with tempfile.TemporaryDirectory() as d:
+            generate_wrapper(music_sdef_info, Path(d))
+            code = (Path(d) / "cli_music.py").read_text()
+            assert "POSIX file" in code  # file type handling
+
+    def test_format_value_handles_enum(self, music_sdef_info):
+        """Enum params should use sdef_type='enum' and not be quoted."""
+        from clam.generator.applescript_gen import get_wrapper_info
+        wi = get_wrapper_info(music_sdef_info)
+        # Find a command with enum params (e.g., play with shuffle mode)
+        for cmd in wi["commands"]:
+            for p in cmd.params:
+                if p.choices:
+                    assert p.sdef_type == "enum", (
+                        f"Param {p.cli_name} has choices but sdef_type={p.sdef_type!r}, expected 'enum'"
+                    )
+
+    def test_property_setter_uses_format_value(self, music_sdef_info):
+        """String property setters should use _format_value, not raw f-string."""
+        with tempfile.TemporaryDirectory() as d:
+            generate_wrapper(music_sdef_info, Path(d))
+            code = (Path(d) / "cli_music.py").read_text()
+            # Should NOT have raw f-string for string property setters
+            assert 'to "{value}"' not in code
+
+
+class TestFilePathEscaping:
+    """Test that file path escaping is present in basic/UI templates."""
+
+    def test_basic_template_escapes_filepath(self):
+        with tempfile.TemporaryDirectory() as d:
+            generate_basic_wrapper("TestApp", Path(d))
+            code = (Path(d) / "cli_testapp.py").read_text()
+            assert "escaped = filepath.replace" in code
+
+    def test_basic_template_uses_escaped_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            generate_basic_wrapper("TestApp", Path(d))
+            code = (Path(d) / "cli_testapp.py").read_text()
+            assert 'POSIX file "{escaped}"' in code
+
+
+class TestCommandSupport:
+    """Test check_command_support static analysis."""
+
+    def test_returns_results_for_music(self, music_sdef_info):
+        results = check_command_support(music_sdef_info)
+        assert len(results) > 0
+
+    def test_play_is_supported(self, music_sdef_info):
+        results = check_command_support(music_sdef_info)
+        play = next(r for r in results if r["name"] == "play")
+        assert play["supported"] is True
+        assert play["issues"] == []
+
+    def test_add_has_complex_param(self, music_sdef_info):
+        """The 'add' command has a specifier direct param — should be flagged."""
+        results = check_command_support(music_sdef_info)
+        add_cmd = next((r for r in results if r["name"] == "add"), None)
+        if add_cmd:
+            assert add_cmd["supported"] is False
+            assert len(add_cmd["issues"]) > 0
+
+
+class TestErrorCodes:
+    """Test that expanded error codes are present in generated code."""
+
+    def test_full_template_has_expanded_errors(self, music_sdef_info):
+        with tempfile.TemporaryDirectory() as d:
+            generate_wrapper(music_sdef_info, Path(d))
+            code = (Path(d) / "cli_music.py").read_text()
+            assert "-1708" in code
+            assert "-1700" in code
+            assert "-600" in code
+            assert "is not running" in code
+
+    def test_basic_template_has_expanded_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            generate_basic_wrapper("TestApp", Path(d))
+            code = (Path(d) / "cli_testapp.py").read_text()
+            assert "-1708" in code
+            assert "-600" in code

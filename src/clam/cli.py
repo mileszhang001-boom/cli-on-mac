@@ -14,6 +14,7 @@ from clam.registry import registry
 from clam.scanner.app_scanner import find_app, find_basic_app, scan_applications, suggest_app
 from clam.scanner.sdef_parser import parse_sdef
 from clam.generator.applescript_gen import (
+    check_command_support,
     generate_basic_wrapper, generate_ui_wrapper, generate_wrapper,
     get_ui_wrapper_info, get_wrapper_info,
 )
@@ -451,6 +452,10 @@ def info(ctx, app_name):
 
     nested_groups = wrapper_info["nested_groups"]
 
+    # Build support map for JSON output
+    support_results = check_command_support(sdef_info)
+    support_map = {r["name"]: r["supported"] for r in support_results}
+
     if json_mode:
         output({
             "app_id": app.app_id,
@@ -461,6 +466,7 @@ def info(ctx, app_name):
                     "name": cmd.cli_name,
                     "description": cmd.description,
                     "has_direct_param": cmd.direct_param,
+                    "supported": support_map.get(cmd.cli_name, True),
                     "params": [
                         {
                             "name": f"--{p.cli_name}",
@@ -599,6 +605,50 @@ def info(ctx, app_name):
             console.print(
                 f"  [dim]复合命令: get-{group.cli_name} → JSON[/dim]"
             )
+
+
+@cli.command()
+@click.argument("app_name")
+@click.pass_context
+def doctor(ctx, app_name):
+    """检查应用命令的可靠性（参数类型分析）"""
+    json_mode = ctx.obj["json"]
+
+    app = find_app(app_name)
+    if not app:
+        _app_not_found(app_name)
+
+    try:
+        sdef_info = parse_sdef(app.sdef_path, app.name)
+    except Exception as e:
+        error(f"解析 sdef 失败: {e}")
+        sys.exit(1)
+
+    results = check_command_support(sdef_info)
+    supported = [r for r in results if r["supported"]]
+    unsupported = [r for r in results if not r["supported"]]
+
+    if json_mode:
+        output({
+            "app_id": app.app_id,
+            "total": len(results),
+            "supported": len(supported),
+            "unsupported": len(unsupported),
+            "commands": results,
+        }, json_mode=True)
+    else:
+        console.print(f"\n[bold]{app.name}[/bold] 命令可靠性检查\n")
+        console.print(
+            f"  [green]✓ {len(supported)}[/green] / {len(results)} 个命令完全支持"
+        )
+        if unsupported:
+            console.print(
+                f"  [yellow]⚠ {len(unsupported)}[/yellow] 个命令含复杂参数类型（可能不可用）\n"
+            )
+            for r in unsupported:
+                issues = "、".join(r["issues"])
+                console.print(f"    [yellow]⚠[/yellow] {r['name']} — {issues}")
+        console.print()
 
 
 @cli.command()
