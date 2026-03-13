@@ -2,7 +2,25 @@
 
 CLAM 把 macOS 应用变成 CLI 命令，你可以直接在终端调用 `clam-<app>` 来控制应用
 
-## Quick Start
+## MCP Server（推荐）
+
+CLAM 提供 MCP Server，AI 启动时自动发现所有工具，无需手动调用 CLI。
+
+**Claude Code 配置** — 运行以下命令添加：
+```bash
+claude mcp add clam -- clam-mcp
+```
+
+配置后 AI 可直接使用 5 个 MCP 工具：
+- `clam_scan` — 发现可控应用
+- `clam_info(app_id)` — 查看应用能力清单
+- `clam_install(app_id)` — 安装 CLI wrapper
+- `clam_execute(app_id, command, args)` — 执行命令
+- `clam_doctor(app_id)` — 检查命令可靠性
+
+## CLI 模式
+
+也可以直接在终端调用 CLI 命令：
 
 ```bash
 clam --json scan                      # 发现可控应用
