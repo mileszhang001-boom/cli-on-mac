@@ -1,10 +1,29 @@
-# CLAM — 给 AI 装上控制 Mac 的手
+<h1 align="center"><img src="assets/logo.png" alt="" width="64" style="vertical-align: middle;">&nbsp; CLAM: 给 AI 装上控制 Mac 的手</h1>
 
-你的 Mac 上有几十个应用，但 AI 一个都碰不到。
+<p align="center">
+  <strong>你的 Mac 上有几十个应用，但 AI 一个都碰不到。<br>
+  CLAM 一键生成 CLI 接口，让 AI Agent 用原生方式操控一切。</strong>
+</p>
 
-CLAM 改变这件事：扫描你的 Mac，一键为每个应用生成 CLI 接口。装完之后，Claude Code、OpenClaw 这些 AI 工具就能直接在终端里播放音乐、操作 Figma、管理文件、发送邮件——相当于给 AI 安上了一双"钛合金虾钳"。
+<p align="center">
+  <a href="#-给你的-ai-装上虾钳"><img src="https://img.shields.io/badge/Quick_Start-1_min-blue?style=for-the-badge" alt="Quick Start"></a>
+  <a href="#-三种模式覆盖几乎所有应用"><img src="https://img.shields.io/badge/Apps-42_Discovered-green?style=for-the-badge" alt="Apps"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Tests-70_Passing-brightgreen?style=for-the-badge" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"></a>
+</p>
 
-## 给你的 AI 装上虾钳
+<p align="center">
+  <img src="https://img.shields.io/badge/python-≥3.10-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/macOS-AppleScript_%2B_Accessibility-black?logo=apple&logoColor=white" alt="macOS">
+  <img src="https://img.shields.io/badge/output-JSON_%2B_Human-blueviolet" alt="Output">
+  <img src="https://img.shields.io/badge/AI-Claude_Code_%2F_OpenClaw-orange" alt="AI Ready">
+</p>
+
+---
+
+装完之后，Claude Code、OpenClaw 这些 AI 工具就能直接在终端里播放音乐、操作 Figma、管理文件、发送邮件——相当于给 AI 安上了一双"钛合金虾钳"🦀
+
+## 🦀 给你的 AI 装上虾钳
 
 三步，不到一分钟：
 
@@ -34,7 +53,7 @@ clam-music get-current-track-artist  # → Leon Vynehall
 
 AI 读完就会用了——扫描、安装、调用，全自动。
 
-## 30 秒上手（人类版）
+## 🖐 30 秒上手（人类版）
 
 ```bash
 clam scan                              # 看看有什么
@@ -45,7 +64,7 @@ clam-music set-sound-volume 80         # 音量 80
 clam-music get-current-track           # 当前曲目全部信息
 ```
 
-## 三种模式，覆盖几乎所有应用
+## 🔧 三种模式，覆盖几乎所有应用
 
 | 模式 | 原理 | 典型应用 | 能力 |
 |------|------|---------|------|
@@ -55,7 +74,7 @@ clam-music get-current-track           # 当前曲目全部信息
 
 安装时自动选择最佳模式，不需要手动指定。
 
-## 完整命令
+## 📖 完整命令
 
 ```bash
 clam scan              # 扫描可控应用
@@ -68,7 +87,7 @@ clam-<app>             # 能力概览
 clam-<app> api         # 完整 API 列表
 ```
 
-## 常见问题
+## ❓ 常见问题
 
 **找不到 `clam-xxx`？** — `source .venv/bin/activate`
 
