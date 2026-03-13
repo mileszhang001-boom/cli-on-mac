@@ -1,6 +1,6 @@
 # CLAM — AI Integration Reference
 
-CLAM 把 macOS 应用变成 CLI 命令。你可以直接在终端调用 `clam-<app>` 来控制应用。
+CLAM 把 macOS 应用变成 CLI 命令，你可以直接在终端调用 `clam-<app>` 来控制应用
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ clam-music --json get-current-track     # → 全部属性 JSON
 
 ## JSON API
 
-所有 `clam` 和 `clam-<app>` 命令都支持 `--json` 输出。
+所有 `clam` 和 `clam-<app>` 命令都支持 `--json` 输出
 
 ### `clam --json scan`
 
@@ -63,9 +63,9 @@ clam-music --json get-current-track     # → 全部属性 JSON
 
 ### `clam --json info <app_id>`
 
-返回完整能力清单。**调用前先读这个，了解有哪些命令可用。**
+返回完整能力清单，**调用前先读这个，了解有哪些命令可用**
 
-App ID 支持模糊匹配：`chrome` → `google-chrome`，`word` → `microsoft-word`。
+App ID 支持模糊匹配：`chrome` → `google-chrome`，`word` → `microsoft-word`
 
 ```json
 {
@@ -123,7 +123,7 @@ clam-music --json get-current-track     # 读嵌套对象全部属性
 
 ## 错误处理
 
-非零退出码 + stderr 输出。常见错误：
+非零退出码 + stderr 输出，常见错误：
 
 - `permission denied` → 需要在系统设置中授权自动化权限
 - `accessibility access denied` → 需要辅助功能权限（UI Scripting 模式）

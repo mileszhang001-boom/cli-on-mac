@@ -5,7 +5,7 @@
   CLAM 一键生成 CLI 接口，让 AI Agent 用原生方式操控一切。</strong>
 </p>
 
-安装并生成CLI后，Claude Code、OpenClaw 能调用应用原生能力播放音乐、操作 Word、发邮件、绘制3D模型，无需依赖API。
+安装并生成CLI后，Claude Code、OpenClaw 能调用应用原生能力播放音乐、操作 Word、发邮件、绘制3D模型，无需依赖API
 
 ## 🦀 给你的 AI 装上虾钳
 
@@ -17,7 +17,7 @@ clam scan               # 发现 42 个可控应用
 clam install music      # 给 Music 生成 CLI
 ```
 
-完成了。现在去 Claude Code 里说一句：
+完成了，现在去 Claude Code 里说一句：
 
 > "帮我把音量调到 50，然后告诉我现在在放什么歌"
 
@@ -33,7 +33,7 @@ clam-music get-current-track-artist  # → Leon Vynehall
 
 > "请阅读 docs/README-AI.md，然后用 clam 帮我控制 Mac 上的应用"
 
-AI 阅读完就立刻用了——扫描、安装、调用自动完成，无需输入一行代码。
+AI 阅读完就立刻用了——扫描、安装、调用自动完成，无需输入一行代码
 
 ## 🖐 30 秒上手（人类版）
 
@@ -54,7 +54,7 @@ clam-music get-current-track           # 当前曲目全部信息
 | **UI Scripting** | 通过菜单点击控制 | Figma (151 命令)、QQ音乐 (10 命令) | 菜单里能点的都能控 |
 | **基础模式** | macOS 标准套件 | 钉钉、WPS、微信 | 前置/退出/打开文件/查版本 |
 
-安装时自动选择最佳模式，不需要手动指定。
+安装时自动选择最佳模式，不需要手动指定
 
 ## 📖 完整命令
 
@@ -77,4 +77,4 @@ clam-<app> api         # 完整 API 列表
 
 **UI Scripting 报权限错误？** — 系统设置 > 隐私与安全性 > 辅助功能，允许终端
 
-**只有基础命令？** — 取决于应用开发者。国产应用大多没有脚本化接口，只能基础模式
+**只有基础命令？** — 取决于应用开发者，国产应用大多没有脚本化接口，只能基础模式
