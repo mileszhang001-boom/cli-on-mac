@@ -5,35 +5,22 @@
   CLAM 一键生成 CLI 接口，让 AI Agent 用原生方式操控一切。</strong>
 </p>
 
-安装并生成CLI后，Claude Code、OpenClaw 能调用应用原生能力播放音乐、操作 Word、发邮件、绘制3D模型，无需依赖API
+安装后，Claude Code 能调用应用原生能力播放音乐、操作 Word、发邮件、绘制3D模型，无需依赖API
 
 ## 🦀 给你的 AI 装上虾钳
 
-三步，不到一分钟：
+两步，不到一分钟：
 
 ```bash
-pip install -e .        # 装 CLAM
-clam scan               # 发现 42 个可控应用
-clam install music      # 给 Music 生成 CLI
+pip install -e .                        # 装 CLAM
+claude mcp add clam -- clam-mcp         # 注册 MCP Server
 ```
 
-完成了，现在去 Claude Code 里说一句：
+完成了。去 Claude Code 里说一句：
 
 > "帮我把音量调到 50，然后告诉我现在在放什么歌"
 
-AI 会自己运行这些命令：
-
-```bash
-clam-music set-sound-volume 50
-clam-music get-current-track-name    # → Slow Devotion
-clam-music get-current-track-artist  # → Leon Vynehall
-```
-
-想让 AI 完整了解 CLAM 的能力？让它读一个文件就够了：
-
-> "请阅读 docs/README-AI.md，然后用 clam 帮我控制 Mac 上的应用"
-
-AI 阅读完就立刻用了——扫描、安装、调用自动完成，无需输入一行代码
+AI 自动扫描应用、安装 wrapper、执行命令——你不需要输入任何命令
 
 ## 🖐 30 秒上手（人类版）
 
@@ -62,6 +49,7 @@ clam-music get-current-track           # 当前曲目全部信息
 clam scan              # 扫描可控应用
 clam install <app>     # 安装 CLI（模糊匹配：chrome → google-chrome）
 clam info <app>        # 查看能力详情
+clam doctor <app>      # 检查命令可靠性
 clam list              # 查看已安装
 clam remove <app>      # 卸载
 
