@@ -1,0 +1,147 @@
+"""Auto-generated basic CLI wrapper for {{ app_name }}.app — do not edit manually.
+
+This app does not provide a scripting definition (.sdef), so only macOS
+standard commands are available.
+"""
+
+import json
+import subprocess
+import sys
+
+import click
+
+
+def _run_applescript(script: str) -> str:
+    """Execute an AppleScript and return its stdout."""
+    result = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "-1743" in stderr:
+            click.echo(
+                "Error: permission denied.\n"
+                "Go to System Settings > Privacy & Security > Automation\n"
+                "and allow this app to control {{ app_name }}.",
+                err=True,
+            )
+            sys.exit(1)
+        msg = stderr.split("execution error: ")[-1] if "execution error:" in stderr else stderr
+        click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+    return result.stdout.strip()
+
+
+def _output(ctx: click.Context, data: str) -> None:
+    if ctx.obj.get("json"):
+        click.echo(json.dumps({"result": data}))
+    else:
+        click.echo(data)
+
+
+def _print_summary() -> None:
+    click.echo("clam-{{ app_id }} — {{ app_name }} 的命令行控制工具（基础模式）\n")
+    click.echo("核心能力:")
+    click.echo("  ⚡ 基础控制    前置窗口、退出应用、打开文件")
+    click.echo("  📊 基本信息    应用名称、版本号、窗口状态")
+    click.echo("")
+    click.echo("  ⚠️  该应用未提供脚本化接口，仅支持 macOS 标准命令。")
+    click.echo("")
+    click.echo("快速上手:")
+    click.echo("  $ clam-{{ app_id }} activate        前置窗口")
+    click.echo("  $ clam-{{ app_id }} get-version      查看版本")
+    click.echo("  $ clam-{{ app_id }} quit             退出应用")
+    click.echo("")
+    click.echo("查看完整 API:")
+    click.echo("  $ clam-{{ app_id }} api")
+
+
+class _ClamGroup(click.Group):
+    def format_help(self, ctx, formatter):
+        _print_summary()
+
+    def invoke(self, ctx):
+        if not ctx.protected_args and not ctx.invoked_subcommand:
+            _print_summary()
+            return
+        return super().invoke(ctx)
+
+
+@click.group(cls=_ClamGroup, invoke_without_command=True)
+@click.option("--json", "use_json", is_flag=True, help="Output as JSON.")
+@click.pass_context
+def cli(ctx: click.Context, use_json: bool) -> None:
+    """Control {{ app_name }}.app from the command line (basic mode)."""
+    ctx.ensure_object(dict)
+    ctx.obj["json"] = use_json
+
+
+@cli.command(name="api")
+def api_cmd() -> None:
+    """查看完整 API 列表"""
+    click.echo("基础控制:")
+    click.echo("  activate                      前置窗口")
+    click.echo("  quit-app                      退出应用")
+    click.echo("  open-file <路径>              用该应用打开文件")
+    click.echo("")
+    click.echo("基本信息:")
+    click.echo("  get-name                      应用名称")
+    click.echo("  get-version                   版本号")
+    click.echo("  get-frontmost                 是否为当前活跃窗口")
+
+
+@cli.command(name="activate")
+@click.pass_context
+def activate_cmd(ctx: click.Context) -> None:
+    """前置窗口"""
+    _run_applescript('tell application "{{ app_name }}" to activate')
+    click.echo("{{ app_name }} 已前置")
+
+
+@cli.command(name="quit-app")
+@click.pass_context
+def quit_cmd(ctx: click.Context) -> None:
+    """退出应用"""
+    _run_applescript('tell application "{{ app_name }}" to quit')
+    click.echo("{{ app_name }} 已退出")
+
+
+@cli.command(name="open-file")
+@click.argument("filepath")
+@click.pass_context
+def open_file_cmd(ctx: click.Context, filepath: str) -> None:
+    """用该应用打开文件"""
+    script = f'tell application "{{ app_name }}" to open POSIX file "{filepath}"'
+    _run_applescript(script)
+    click.echo(f"已用 {{ app_name }} 打开 {filepath}")
+
+
+@cli.command(name="get-name")
+@click.pass_context
+def get_name_cmd(ctx: click.Context) -> None:
+    """获取应用名称"""
+    result = _run_applescript('tell application "{{ app_name }}" to get name')
+    _output(ctx, result)
+
+
+@cli.command(name="get-version")
+@click.pass_context
+def get_version_cmd(ctx: click.Context) -> None:
+    """获取版本号"""
+    result = _run_applescript('tell application "{{ app_name }}" to get version')
+    _output(ctx, result)
+
+
+@cli.command(name="get-frontmost")
+@click.pass_context
+def get_frontmost_cmd(ctx: click.Context) -> None:
+    """是否为当前活跃窗口"""
+    result = _run_applescript('tell application "{{ app_name }}" to get frontmost')
+    _output(ctx, result)
+
+
+if __name__ == "__main__":
+    cli()

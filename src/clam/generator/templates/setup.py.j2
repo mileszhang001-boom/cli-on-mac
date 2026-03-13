@@ -1,0 +1,13 @@
+from setuptools import setup
+
+setup(
+    name="clam-{{ app_id }}",
+    version="0.1.0",
+    py_modules=["{{ module_name }}"],
+    install_requires=["click>=8.0"],
+    entry_points={
+        "console_scripts": [
+            "clam-{{ app_id }}={{ module_name }}:cli",
+        ],
+    },
+)

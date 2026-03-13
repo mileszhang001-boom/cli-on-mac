@@ -1,0 +1,289 @@
+"""Auto-generated CLI wrapper for {{ app_name }}.app — do not edit manually."""
+
+import json
+import subprocess
+import sys
+
+import click
+
+
+def _run_applescript(script: str) -> str:
+    """Execute an AppleScript and return its stdout."""
+    result = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "-1743" in stderr:
+            click.echo(
+                "Error: permission denied.\n"
+                "Go to System Settings > Privacy & Security > Automation\n"
+                "and allow this app to control {{ app_name }}.",
+                err=True,
+            )
+            sys.exit(1)
+        if "-1728" in stderr:
+            click.echo(
+                "Error: object not available (e.g. no current track playing).",
+                err=True,
+            )
+            sys.exit(1)
+        # Strip verbose AppleScript error prefix
+        msg = stderr.split("execution error: ")[-1] if "execution error:" in stderr else stderr
+        click.echo(f"Error: {msg}", err=True)
+        sys.exit(1)
+    return result.stdout.strip()
+
+
+def _format_value(value, sdef_type: str) -> str:
+    """Format a Python value for AppleScript."""
+    if sdef_type == "text":
+        return f'"{value}"'
+    return str(value)
+
+
+def _output(ctx: click.Context, data: str) -> None:
+    """Print output, optionally as JSON."""
+    if ctx.obj.get("json"):
+        click.echo(json.dumps({"result": data}))
+    else:
+        click.echo(data)
+
+
+def _print_summary() -> None:
+    """Print human-readable capability summary in Chinese."""
+    click.echo("clam-{{ app_id }} — {{ app_name }} 的命令行控制工具\n")
+    click.echo("核心能力:")
+{% if commands %}
+    click.echo("  ⚡ 执行操作    {{ commands | length }} 个命令{% if commands | length <= 8 %}：{{ commands | map(attribute='cli_name') | join('、') }}{% endif %}")
+{% endif %}
+{% if app_properties %}
+{%- set rw_props = [] %}
+{%- for p in app_properties %}{% if p.access == "rw" %}{% if rw_props.append(p) %}{% endif %}{% endif %}{% endfor %}
+    click.echo("  📊 读写状态    {{ app_properties | length }} 个属性{% if rw_props %}（{{ rw_props | length }} 个可写）{% endif %}")
+{% endif %}
+{% for group in nested_groups %}
+    click.echo("  🔍 {{ group.as_name }}    {{ group.properties | length }} 个属性可深层访问")
+{% endfor %}
+    click.echo("")
+    click.echo("快速上手:")
+{% if commands %}
+    click.echo("  $ clam-{{ app_id }} {{ commands[0].cli_name }}{{ '                    ' + commands[0].description if commands[0].description else '' }}")
+{% endif %}
+{% if app_properties %}
+    click.echo("  $ clam-{{ app_id }} get-{{ app_properties[0].cli_name }}{{ '           读取' + app_properties[0].description_short if app_properties[0].description_short else '' }}")
+{% if app_properties[0].access == "rw" %}
+    click.echo("  $ clam-{{ app_id }} set-{{ app_properties[0].cli_name }} <值>    设置{{ app_properties[0].description_short }}")
+{% endif %}
+{% endif %}
+{% if nested_groups %}
+    click.echo("  $ clam-{{ app_id }} get-{{ nested_groups[0].cli_name }}           获取{{ nested_groups[0].as_name }}的全部信息")
+{% endif %}
+    click.echo("")
+    click.echo("查看完整 API（供 AI 工具使用）:")
+    click.echo("  $ clam-{{ app_id }} api")
+
+
+class _ClamGroup(click.Group):
+    """Custom group that shows Chinese summary instead of raw command list."""
+
+    def format_help(self, ctx, formatter):
+        _print_summary()
+
+    def invoke(self, ctx):
+        if not ctx.protected_args and not ctx.invoked_subcommand:
+            _print_summary()
+            return
+        return super().invoke(ctx)
+
+
+@click.group(cls=_ClamGroup, invoke_without_command=True)
+@click.option("--json", "use_json", is_flag=True, help="Output as JSON.")
+@click.pass_context
+def cli(ctx: click.Context, use_json: bool) -> None:
+    """Control {{ app_name }}.app from the command line."""
+    ctx.ensure_object(dict)
+    ctx.obj["json"] = use_json
+
+
+@cli.command(name="api")
+def api_cmd() -> None:
+    """查看完整 API 列表（供 AI 工具使用）"""
+{% if commands %}
+    click.echo("操作命令:")
+{% for cmd in commands %}
+    click.echo("  {{ cmd.cli_name.ljust(30) }} {{ cmd.description }}")
+{% endfor %}
+{% endif %}
+{% if app_properties %}
+    click.echo("")
+    click.echo("属性 (get/set):")
+{% for prop in app_properties %}
+    click.echo("  get-{{ prop.cli_name.ljust(26) }} {{ prop.description_short }}{% if prop.access == 'rw' %}  [可写: set-{{ prop.cli_name }}]{% endif %}")
+{% endfor %}
+{% endif %}
+{% for group in nested_groups %}
+    click.echo("")
+    click.echo("{{ group.as_name }} ({{ group.class_name }}) 属性:")
+    click.echo("  get-{{ group.cli_name.ljust(26) }} 获取全部属性 (JSON)")
+{% for prop in group.properties %}
+    click.echo("  get-{{ group.cli_name }}-{{ prop.cli_name.ljust(26 - group.cli_name | length - 1) }} {{ prop.as_name }}{% if prop.access == 'rw' %}  [可写]{% endif %}")
+{% endfor %}
+{% endfor %}
+
+
+# ── Action commands ──────────────────────────────────────────────────────────
+{% for cmd in commands %}
+
+@cli.command(name="{{ cmd.cli_name }}")
+{% if cmd.direct_param and cmd.direct_optional %}
+@click.argument("item", required=False, default=None)
+{% elif cmd.direct_param %}
+@click.argument("item")
+{% endif %}
+{% for param in cmd.params %}
+{% if param.is_flag %}
+@click.option("--{{ param.cli_name }}", is_flag=True, default=False, help="{{ param.description }}")
+{% elif param.choices %}
+@click.option("--{{ param.cli_name }}", type=click.Choice({{ param.choices }}), default=None, help="{{ param.description }}")
+{% else %}
+@click.option("--{{ param.cli_name }}", default=None, help="{{ param.description }}")
+{% endif %}
+{% endfor %}
+@click.pass_context
+def {{ cmd.func_name }}(ctx{% if cmd.direct_param %}, item{% endif %}{% for param in cmd.params %}, {{ param.func_name }}{% endfor %}) -> None:
+    """{{ cmd.description }}"""
+    parts = ["{{ cmd.name }}"]
+{%- if cmd.direct_param and cmd.direct_optional %}
+    if item is not None:
+        parts.append(_format_value(item, "{{ cmd.direct_type }}"))
+{%- elif cmd.direct_param %}
+    parts.append(_format_value(item, "{{ cmd.direct_type }}"))
+{%- endif %}
+{% for param in cmd.params %}
+{% if param.is_flag %}
+    if {{ param.func_name }}:
+        parts.append("with {{ param.as_name }}")
+{% else %}
+    if {{ param.func_name }} is not None:
+        parts.append("{{ param.as_name }}")
+        parts.append(_format_value({{ param.func_name }}, "{{ param.sdef_type }}"))
+{% endif %}
+{% endfor %}
+    script = f'tell application "{{ app_name }}" to {" ".join(parts)}'
+    result = _run_applescript(script)
+    if result:
+        _output(ctx, result)
+{% endfor %}
+
+# ── Application property get/set ─────────────────────────────────────────────
+{% for prop in app_properties %}
+
+@cli.command(name="get-{{ prop.cli_name }}")
+@click.pass_context
+def get_{{ prop.func_name }}(ctx: click.Context) -> None:
+    """Get {{ prop.description_short }}."""
+    result = _run_applescript('tell application "{{ app_name }}" to get {{ prop.as_name }}')
+    _output(ctx, result)
+{% if prop.access == "rw" %}
+
+@cli.command(name="set-{{ prop.cli_name }}")
+{% if prop.value_type == "bool" %}
+@click.argument("value", type=click.Choice(["true", "false"]))
+{% elif prop.value_type == "int" %}
+@click.argument("value", type=int)
+{% elif prop.value_type == "float" %}
+@click.argument("value", type=float)
+{% elif prop.choices %}
+@click.argument("value", type=click.Choice({{ prop.choices }}))
+{% else %}
+@click.argument("value")
+{% endif %}
+@click.pass_context
+def set_{{ prop.func_name }}(ctx: click.Context, value) -> None:
+    """Set {{ prop.description_short }}."""
+{% if prop.value_type == "str" %}
+    script = f'tell application "{{ app_name }}" to set {{ prop.as_name }} to "{value}"'
+{% else %}
+    script = f'tell application "{{ app_name }}" to set {{ prop.as_name }} to {value}'
+{% endif %}
+    _run_applescript(script)
+    click.echo(f"{{ prop.as_name }} set to {value}")
+{% endif %}
+{% endfor %}
+
+{% for group in nested_groups %}
+# ── {{ group.as_name }} ({{ group.class_name }}) properties ──────────────────
+{% for prop in group.properties %}
+
+@cli.command(name="get-{{ group.cli_name }}-{{ prop.cli_name }}")
+@click.pass_context
+def get_{{ group.func_name }}_{{ prop.func_name }}(ctx: click.Context) -> None:
+    """Get {{ prop.as_name }} of {{ group.as_name }}."""
+    result = _run_applescript(
+        'tell application "{{ app_name }}" to get {{ prop.as_name }} of {{ group.as_name }}'
+    )
+    _output(ctx, result)
+{% if prop.access == "rw" %}
+
+@cli.command(name="set-{{ group.cli_name }}-{{ prop.cli_name }}")
+{% if prop.value_type == "bool" %}
+@click.argument("value", type=click.Choice(["true", "false"]))
+{% elif prop.value_type == "int" %}
+@click.argument("value", type=int)
+{% elif prop.value_type == "float" %}
+@click.argument("value", type=float)
+{% elif prop.choices %}
+@click.argument("value", type=click.Choice({{ prop.choices }}))
+{% else %}
+@click.argument("value")
+{% endif %}
+@click.pass_context
+def set_{{ group.func_name }}_{{ prop.func_name }}(ctx: click.Context, value) -> None:
+    """Set {{ prop.as_name }} of {{ group.as_name }}."""
+{% if prop.value_type == "str" %}
+    script = f'tell application "{{ app_name }}" to set {{ prop.as_name }} of {{ group.as_name }} to "{value}"'
+{% else %}
+    script = f'tell application "{{ app_name }}" to set {{ prop.as_name }} of {{ group.as_name }} to {value}'
+{% endif %}
+    _run_applescript(script)
+    click.echo(f"{{ prop.as_name }} of {{ group.as_name }} set to {value}")
+{% endif %}
+{% endfor %}
+
+@cli.command(name="get-{{ group.cli_name }}")
+@click.pass_context
+def get_{{ group.func_name }}(ctx: click.Context) -> None:
+    """Get all properties of {{ group.as_name }} as JSON."""
+    script = (
+        'tell application "{{ app_name }}"\n'
+        '    set t to {{ group.as_name }}\n'
+        '    set d to ASCII character 9\n'
+        '    set output to ""\n'
+{% for prop in group.properties[:max_compound_props] %}
+        '    try\n'
+        '        set output to output & "{{ prop.as_name }}" & d & ({{ prop.as_name }} of t as text) & linefeed\n'
+        '    end try\n'
+{% endfor %}
+        '    return output\n'
+        'end tell'
+    )
+    raw = _run_applescript(script)
+    data = {}
+    for line in raw.split("\n"):
+        if "\t" in line:
+            key, _, val = line.partition("\t")
+            data[key] = val
+    if ctx.obj.get("json"):
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+    else:
+        for k, v in data.items():
+            click.echo(f"  {k}: {v}")
+{% endfor %}
+
+
+if __name__ == "__main__":
+    cli()
