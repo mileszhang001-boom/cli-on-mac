@@ -5,20 +5,6 @@
   CLAM 一键生成 CLI 接口，让 AI Agent 用原生方式操控一切。</strong>
 </p>
 
-<p align="center">
-  <a href="#-给你的-ai-装上虾钳"><img src="https://img.shields.io/badge/Quick_Start-1_min-blue?style=for-the-badge" alt="Quick Start"></a>
-  <a href="#-三种模式覆盖几乎所有应用"><img src="https://img.shields.io/badge/Apps-42_Discovered-green?style=for-the-badge" alt="Apps"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Tests-70_Passing-brightgreen?style=for-the-badge" alt="Tests"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"></a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/python-≥3.10-blue?logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/macOS-AppleScript_%2B_Accessibility-black?logo=apple&logoColor=white" alt="macOS">
-  <img src="https://img.shields.io/badge/output-JSON_%2B_Human-blueviolet" alt="Output">
-  <img src="https://img.shields.io/badge/AI-Claude_Code_%2F_OpenClaw-orange" alt="AI Ready">
-</p>
-
 ---
 
 装完之后，Claude Code、OpenClaw 这些 AI 工具就能直接在终端里播放音乐、操作 Figma、管理文件、发送邮件——相当于给 AI 安上了一双"钛合金虾钳"🦀
