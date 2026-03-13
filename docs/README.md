@@ -5,9 +5,7 @@
   CLAM 一键生成 CLI 接口，让 AI Agent 用原生方式操控一切。</strong>
 </p>
 
----
-
-装完之后，Claude Code、OpenClaw 这些 AI 工具就能直接在终端里播放音乐、操作 Figma、管理文件、发送邮件——相当于给 AI 安上了一双"钛合金虾钳"🦀
+安装并生成CLI后，Claude Code、OpenClaw 能调用应用原生能力播放音乐、操作 Word、发邮件、绘制3D模型，无需依赖API。
 
 ## 🦀 给你的 AI 装上虾钳
 
@@ -19,11 +17,11 @@ clam scan               # 发现 42 个可控应用
 clam install music      # 给 Music 生成 CLI
 ```
 
-完事了。现在去 Claude Code 里说一句：
+完成了。现在去 Claude Code 里说一句：
 
 > "帮我把音量调到 50，然后告诉我现在在放什么歌"
 
-AI 会自己跑这些命令：
+AI 会自己运行这些命令：
 
 ```bash
 clam-music set-sound-volume 50
@@ -33,11 +31,9 @@ clam-music get-current-track-artist  # → Leon Vynehall
 
 想让 AI 完整了解 CLAM 的能力？让它读一个文件就够了：
 
-```
-请阅读 docs/README-AI.md，然后用 clam 帮我控制 Mac 上的应用
-```
+> "请阅读 docs/README-AI.md，然后用 clam 帮我控制 Mac 上的应用"
 
-AI 读完就会用了——扫描、安装、调用，全自动。
+AI 阅读完就立刻用了——扫描、安装、调用自动完成，无需输入一行代码。
 
 ## 🖐 30 秒上手（人类版）
 
