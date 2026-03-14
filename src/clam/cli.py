@@ -242,7 +242,12 @@ def scan(ctx):
         def _label(r):
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
             emoji = entry[0] if entry else "📎"
-            return f"{emoji} {r['name']}"
+            name = r["name"]
+            app_id = r["app_id"]
+            # 名称和 id 相同（忽略大小写）时不重复显示
+            if name.lower().replace(" ", "-") == app_id:
+                return f"{emoji} {name}"
+            return f"{emoji} {name} [dim]({app_id})[/dim]"
 
         col_width = max(_display_width(_label(r)) for r in results) + 2
 
@@ -255,9 +260,8 @@ def scan(ctx):
                 label = _label(r)
                 padded = _pad_to(label, col_width)
                 mark = "  [green]✓[/green]" if r["installed"] else ""
-                app_id_hint = f"[dim cyan]{r['app_id']}[/dim cyan]"
                 console.print(
-                    f"  {idx:2d}.  {padded}[dim]|[/dim]  {desc}  {app_id_hint}{mark}"
+                    f"  {idx:2d}.  {padded}[dim]|[/dim]  {desc}{mark}"
                 )
                 idx += 1
             console.print()
