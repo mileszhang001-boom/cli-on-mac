@@ -1,6 +1,12 @@
 <h1 align="center"><img src="assets/logo.png" alt="" width="64" style="vertical-align: middle;">&nbsp; CLAM: 给 AI 装上控制 Mac 的手</h1>
 
 <p align="center">
+  <a href="https://pypi.org/project/clam-mac/"><img src="https://img.shields.io/pypi/v/clam-mac?color=blue" alt="PyPI"></a>
+  <a href="https://pypi.org/project/clam-mac/"><img src="https://img.shields.io/pypi/pyversions/clam-mac" alt="Python"></a>
+  <a href="https://github.com/mileszhang001-boom/cli-on-mac/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/clam-mac" alt="License"></a>
+</p>
+
+<p align="center">
   <strong>你的 Mac 上有几十个应用，但 AI 一个都碰不到。<br>
   CLAM 自动扫描、生成 CLI 接口，让任何 AI Agent 用原生方式操控一切。</strong>
 </p>
@@ -33,7 +39,15 @@
 ## 🦀 给你的 AI 装上虾钳
 
 ```bash
-pip install -e .                        # 装 CLAM
+pip install clam-mac                    # 从 PyPI 安装
+```
+
+或者从源码安装：
+
+```bash
+git clone https://github.com/mileszhang001-boom/cli-on-mac.git
+cd cli-on-mac
+pip install -e .                        # 开发模式
 ```
 
 然后根据你使用的 AI Agent 选择集成方式：
