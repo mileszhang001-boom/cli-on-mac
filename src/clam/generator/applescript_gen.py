@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from clam.generator.specifier_defaults import get_specifier_default
 from clam.scanner.menu_scanner import MenuGroup, MenuItem, MenuScanResult
 from clam.scanner.sdef_parser import SdefCommand, SdefEnumeration, SdefInfo, SdefProperty
 
@@ -36,6 +37,7 @@ class TemplateCommand:
     direct_optional: bool
     direct_type: str     # 直接参数的 sdef 类型
     params: list[TemplateParam]
+    specifier_default: str = ""  # 默认 AppleScript 对象引用（如 "active tab of window 1"）
 
 
 @dataclass
@@ -100,6 +102,7 @@ def _should_include_command(cmd: SdefCommand) -> bool:
 def _build_template_commands(
     commands: list[SdefCommand],
     enum_map: dict[str, list[str]],
+    app_id: str = "",
 ) -> list[TemplateCommand]:
     result = []
     for cmd in commands:
@@ -146,6 +149,11 @@ def _build_template_commands(
         dp_optional = has_dp and cmd.direct_parameter.optional
         dp_type = cmd.direct_parameter.type if has_dp else ""
 
+        # Look up specifier/document defaults for this app
+        spec_default = ""
+        if has_dp and not dp_optional and dp_type:
+            spec_default = get_specifier_default(app_id, dp_type) or ""
+
         result.append(TemplateCommand(
             name=cmd.name,
             cli_name=cmd.cli_name,
@@ -155,6 +163,7 @@ def _build_template_commands(
             direct_optional=dp_optional,
             direct_type=dp_type,
             params=params,
+            specifier_default=spec_default,
         ))
     return result
 
@@ -234,13 +243,15 @@ def _build_nested_groups(
     return groups
 
 
-def get_wrapper_info(sdef_info: SdefInfo) -> dict:
+def get_wrapper_info(sdef_info: SdefInfo, app_id: str = "") -> dict:
     """获取 wrapper 的命令和属性信息（不生成文件）。
 
     Returns dict with commands, properties, and nested_groups.
     """
     enum_map = _build_enum_map(sdef_info.enumerations)
-    commands = _build_template_commands(sdef_info.commands, enum_map)
+    if not app_id:
+        app_id = sdef_info.app_name.lower().replace(" ", "-")
+    commands = _build_template_commands(sdef_info.commands, enum_map, app_id)
     app_props = [p for p in sdef_info.properties if p.class_name == "application"]
 
     # Separate simple properties from nested object references
@@ -257,7 +268,7 @@ def get_wrapper_info(sdef_info: SdefInfo) -> dict:
     }
 
 
-def check_command_support(sdef_info: SdefInfo) -> list[dict]:
+def check_command_support(sdef_info: SdefInfo, app_id: str = "") -> list[dict]:
     """Analyze each command's parameter types and report support level.
 
     Returns list of dicts with:
@@ -276,7 +287,9 @@ def check_command_support(sdef_info: SdefInfo) -> list[dict]:
             dp_type = cmd.direct_parameter.type
             if not cmd.direct_parameter.optional:
                 if dp_type not in _SUPPORTED_TYPES and dp_type not in enum_map:
-                    issues.append(f"direct param type '{dp_type}'")
+                    # Check if we have a specifier default for this app+type
+                    if not get_specifier_default(app_id, dp_type):
+                        issues.append(f"direct param type '{dp_type}'")
         # Check named parameters
         for p in cmd.parameters:
             if p.type and p.type not in _SUPPORTED_TYPES and p.type not in enum_map:
@@ -310,7 +323,7 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
     class_names = {p.class_name for p in sdef_info.properties}
     simple_props = [p for p in app_props if p.type not in class_names or p.hidden]
 
-    commands = _build_template_commands(sdef_info.commands, enum_map)
+    commands = _build_template_commands(sdef_info.commands, enum_map, app_id)
     app_properties = _build_template_properties(simple_props, enum_map)
     nested_groups = _build_nested_groups(app_props, sdef_info.properties, enum_map)
 

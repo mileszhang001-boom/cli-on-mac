@@ -1,8 +1,8 @@
-# CLAM — CLI Reference
+# CLAM — CLI / MCP / Lobster Reference
 
-CLAM 把 macOS 应用变成 CLI 命令，你可以直接在终端调用 `clam-<app>` 来控制应用
+CLAM 把 macOS 应用变成 CLI 命令，你可以直接在终端调用 `clam-<app>` 来控制应用。
 
-> **推荐方式**：使用 MCP Server（`claude mcp add clam -- clam-mcp`），AI 自动发现所有工具，无需读此文档
+> **Agent 集成**：可作为 OpenClaw Skill / Lobster pipeline step / Claude Code MCP Server / 或任何能调用 shell 的 Agent 框架使用。
 
 ## CLI 命令
 

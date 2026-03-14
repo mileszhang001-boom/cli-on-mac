@@ -163,7 +163,9 @@ def api_cmd() -> None:
 {% for cmd in commands %}
 
 @cli.command(name="{{ cmd.cli_name }}")
-{% if cmd.direct_param and cmd.direct_optional %}
+{% if cmd.specifier_default %}
+@click.argument("target", required=False, default=None)
+{% elif cmd.direct_param and cmd.direct_optional %}
 @click.argument("item", required=False, default=None)
 {% elif cmd.direct_param %}
 @click.argument("item")
@@ -178,10 +180,12 @@ def api_cmd() -> None:
 {% endif %}
 {% endfor %}
 @click.pass_context
-def {{ cmd.func_name }}(ctx{% if cmd.direct_param %}, item{% endif %}{% for param in cmd.params %}, {{ param.func_name }}{% endfor %}) -> None:
+def {{ cmd.func_name }}(ctx{% if cmd.specifier_default %}, target{% elif cmd.direct_param %}, item{% endif %}{% for param in cmd.params %}, {{ param.func_name }}{% endfor %}) -> None:
     """{{ cmd.description }}"""
     parts = ["{{ cmd.name }}"]
-{%- if cmd.direct_param and cmd.direct_optional %}
+{%- if cmd.specifier_default %}
+    parts.append(target if target is not None else "{{ cmd.specifier_default }}")
+{%- elif cmd.direct_param and cmd.direct_optional %}
     if item is not None:
         parts.append(_format_value(item, "{{ cmd.direct_type }}"))
 {%- elif cmd.direct_param %}

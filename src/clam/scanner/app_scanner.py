@@ -12,6 +12,7 @@ SCAN_DIRS = [
     Path("/System/Applications"),
     Path("/System/Applications/Utilities"),
     Path("/System/Library/CoreServices"),  # Finder.app lives here
+    Path.home() / "Applications",          # 用户自装应用
 ]
 
 
@@ -19,6 +20,23 @@ SCAN_DIRS = [
 # Each entry: (bundle_name, app_id, display_name, process_name)
 _KNOWN_UI_APPS: list[tuple[str, str, str, str]] = [
     ("Figma.app", "figma", "Figma", "Figma"),
+    # 通信
+    ("Telegram.app", "telegram", "Telegram", "Telegram"),
+    ("WeChat.app", "wechat", "微信", "WeChat"),
+    ("QQ.app", "qq", "QQ", "QQ"),
+    ("DingTalk.app", "dingtalk", "钉钉", "DingTalk"),
+    ("Lark.app", "lark", "飞书", "Miwork"),
+    ("Discord.app", "discord", "Discord", "Discord"),
+    ("Slack.app", "slack", "Slack", "Slack"),
+    ("zoom.us.app", "zoom", "Zoom", "zoom.us"),
+    # 开发 / 效率
+    ("Visual Studio Code.app", "visual-studio-code", "VS Code", "Code"),
+    ("Cursor.app", "cursor", "Cursor", "Cursor"),
+    ("Notion.app", "notion", "Notion", "Notion"),
+    ("Obsidian.app", "obsidian", "Obsidian", "Obsidian"),
+    # 媒体
+    ("Spotify.app", "spotify", "Spotify", "Spotify"),
+    ("QQMusic.app", "qqmusic", "QQ音乐", "QQMusic"),
 ]
 
 
@@ -29,7 +47,8 @@ class AppInfo:
     bundle_path: str   # "/System/Applications/Music.app"
     sdef_path: str     # ".../com.apple.Music.sdef" 或 "" (基础模式)
     installed: bool    # 查注册表
-    basic_mode: bool = False  # 无 sdef，仅支持标准套件
+    basic_mode: bool = False   # 无 sdef，仅支持标准套件
+    process_name: str = ""     # System Events 进程名（UI Scripting 用）
 
 
 def _app_name_to_id(name: str) -> str:
@@ -52,10 +71,16 @@ def scan_applications() -> list[AppInfo]:
                 continue
 
             resources = app_bundle / "Contents" / "Resources"
-            if not resources.exists():
-                continue
 
-            sdef_files = list(resources.glob("*.sdef"))
+            sdef_files = list(resources.glob("*.sdef")) if resources.exists() else []
+
+            # Fallback: search nested .app bundles for sdef (e.g. ChatGPT Atlas)
+            if not sdef_files:
+                try:
+                    sdef_files = list(app_bundle.rglob("*.sdef"))[:1]
+                except (PermissionError, OSError):
+                    pass
+
             if not sdef_files:
                 continue
 
@@ -76,7 +101,7 @@ def scan_applications() -> list[AppInfo]:
             ))
 
     # Append known UI Scripting apps (no .sdef) if installed
-    for bundle_name, app_id, display_name, _process in _KNOWN_UI_APPS:
+    for bundle_name, app_id, display_name, process in _KNOWN_UI_APPS:
         if app_id in seen_ids:
             continue
         for scan_dir in SCAN_DIRS:
@@ -90,6 +115,7 @@ def scan_applications() -> list[AppInfo]:
                     sdef_path="",
                     installed=app_id in installed,
                     basic_mode=True,  # will be upgraded to UI mode at install time
+                    process_name=process,
                 ))
                 break
 

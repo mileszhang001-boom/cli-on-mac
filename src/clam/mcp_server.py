@@ -48,7 +48,7 @@ def clam_scan() -> str:
         if app.sdef_path:
             try:
                 sdef_info = parse_sdef(app.sdef_path, app.name)
-                wi = get_wrapper_info(sdef_info)
+                wi = get_wrapper_info(sdef_info, app.app_id)
                 results.append({
                     "name": app.name,
                     "app_id": app.app_id,
@@ -83,13 +83,24 @@ def clam_info(app_id: str) -> str:
     if not app:
         return json.dumps({"error": f"未找到应用: {app_id}"})
 
+    if not app.sdef_path:
+        return json.dumps({
+            "app_id": app.app_id,
+            "app_name": app.name,
+            "mode": "ui" if not app.basic_mode else "basic",
+            "note": "此应用无 AppleScript 脚本定义，请用 clam_install 安装后通过菜单点击控制",
+            "commands": [],
+            "properties": [],
+            "nested_groups": [],
+        }, ensure_ascii=False)
+
     try:
         sdef_info = parse_sdef(app.sdef_path, app.name)
     except Exception as e:
         return json.dumps({"error": f"解析 sdef 失败: {e}"})
 
-    wi = get_wrapper_info(sdef_info)
-    support = check_command_support(sdef_info)
+    wi = get_wrapper_info(sdef_info, app.app_id)
+    support = check_command_support(sdef_info, app.app_id)
     support_map = {r["name"]: r["supported"] for r in support}
 
     return json.dumps({
@@ -159,7 +170,7 @@ def clam_install(app_id: str) -> str:
     menu_scan = None
 
     if not app.sdef_path:
-        menu_scan = scan_menus(app.name)
+        menu_scan = scan_menus(app.name, app.process_name or None)
         if menu_scan and menu_scan.total_items > 0:
             mode = "ui"
         else:
@@ -264,12 +275,15 @@ def clam_doctor(app_id: str) -> str:
     if not app:
         return json.dumps({"error": f"未找到应用: {app_id}"})
 
+    if not app.sdef_path:
+        return json.dumps({"error": f"{app.name} 无 AppleScript 脚本定义，doctor 仅适用于 full 模式应用"})
+
     try:
         sdef_info = parse_sdef(app.sdef_path, app.name)
     except Exception as e:
         return json.dumps({"error": f"解析 sdef 失败: {e}"})
 
-    results = check_command_support(sdef_info)
+    results = check_command_support(sdef_info, app.app_id)
     supported = [r for r in results if r["supported"]]
     unsupported = [r for r in results if not r["supported"]]
 

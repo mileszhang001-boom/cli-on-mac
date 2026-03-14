@@ -264,7 +264,7 @@ def install(ctx, app_name):
         # 无 sdef — 尝试 UI Scripting 模式：探测菜单
         if not json_mode:
             status(f"🔍 正在探测 {app.name} 的菜单结构…")
-        menu_scan = scan_menus(app.name)
+        menu_scan = scan_menus(app.name, app.process_name or None)
         if menu_scan and menu_scan.total_items > 0:
             mode = "ui"
         else:
@@ -453,7 +453,7 @@ def info(ctx, app_name):
     nested_groups = wrapper_info["nested_groups"]
 
     # Build support map for JSON output
-    support_results = check_command_support(sdef_info)
+    support_results = check_command_support(sdef_info, app.app_id)
     support_map = {r["name"]: r["supported"] for r in support_results}
 
     if json_mode:
@@ -624,7 +624,7 @@ def doctor(ctx, app_name):
         error(f"解析 sdef 失败: {e}")
         sys.exit(1)
 
-    results = check_command_support(sdef_info)
+    results = check_command_support(sdef_info, app.app_id)
     supported = [r for r in results if r["supported"]]
     unsupported = [r for r in results if not r["supported"]]
 
