@@ -20,6 +20,15 @@
 pip install clam-mac
 ```
 
+> **找不到 `pip` 或报 `externally-managed-environment`？**
+> macOS 自带的是 `pip3` 而非 `pip`，且 Python 3.12+ 禁止直接安装。请使用虚拟环境：
+> ```bash
+> python3 -m venv ~/clam-env
+> source ~/clam-env/bin/activate
+> pip install clam-mac
+> ```
+> 把 `source ~/clam-env/bin/activate` 加入 `~/.zshrc` 即可永久生效。
+
 ## 快速上手
 
 ```bash

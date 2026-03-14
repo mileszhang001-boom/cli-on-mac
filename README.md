@@ -20,6 +20,15 @@ Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that —
 pip install clam-mac
 ```
 
+> **`pip` not found or `externally-managed-environment` error?**
+> macOS ships with `pip3` (not `pip`), and Python 3.12+ blocks direct installs. Use a virtual environment:
+> ```bash
+> python3 -m venv ~/clam-env
+> source ~/clam-env/bin/activate
+> pip install clam-mac
+> ```
+> Add `source ~/clam-env/bin/activate` to your `~/.zshrc` to make it permanent.
+
 ## Quick Start
 
 ```bash
