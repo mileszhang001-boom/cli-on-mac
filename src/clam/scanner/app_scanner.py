@@ -52,8 +52,12 @@ class AppInfo:
 
 
 def _app_name_to_id(name: str) -> str:
-    """将应用显示名转为 CLI 安全的 id。"""
-    return name.lower().replace(" ", "-")
+    """将应用显示名转为 CLI 安全的 id（仅保留 ASCII 字母、数字、连字符）。"""
+    import re
+    slug = name.lower().replace(" ", "-")
+    slug = re.sub(r"[^a-z0-9-]", "", slug)
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    return slug or "unknown"
 
 
 def scan_applications() -> list[AppInfo]:
@@ -123,17 +127,24 @@ def scan_applications() -> list[AppInfo]:
 
 
 def find_app(name_or_id: str) -> AppInfo | None:
-    """按名称或 ID 查找应用（大小写不敏感，支持子串匹配）。"""
+    """按名称或 ID 查找应用（大小写不敏感，支持子串匹配 + 中文别名）。"""
     needle = name_or_id.lower().strip()
     apps = scan_applications()
+    needles = _expand_aliases(name_or_id)
 
     # 精确匹配
     for app in apps:
         if app.app_id == needle or app.name.lower() == needle:
             return app
+        # 别名精确匹配
+        if any(app.app_id == n for n in needles):
+            return app
 
     # 子串匹配（如 "chrome" → "google-chrome"）
-    matches = [a for a in apps if needle in a.app_id or needle in a.name.lower()]
+    matches = [
+        a for a in apps
+        if any(n in a.app_id or n in a.name.lower() for n in needles)
+    ]
     if len(matches) == 1:
         return matches[0]
 
