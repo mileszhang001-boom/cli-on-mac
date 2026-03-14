@@ -239,17 +239,19 @@ def scan(ctx):
         sorted_cats = sorted(grouped.keys(), key=lambda c: cat_order.index(c) if c in cat_order else 99)
 
         # 计算最长「emoji+名称」的显示宽度以对齐竖线
-        def _label(r):
+        def _plain_label(r):
+            """纯文本标签（用于计算对齐宽度）。"""
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
             emoji = entry[0] if entry else "📎"
-            name = r["name"]
-            app_id = r["app_id"]
-            # 名称和 id 相同（忽略大小写）时不重复显示
-            if name.lower().replace(" ", "-") == app_id:
-                return f"{emoji} {name}"
-            return f"{emoji} {name} [dim]({app_id})[/dim]"
+            return f"{emoji} {r['name']} ({r['app_id']})"
 
-        col_width = max(_display_width(_label(r)) for r in results) + 2
+        def _rich_label(r):
+            """Rich 格式标签（用于显示）。"""
+            entry = _APP_DESCRIPTIONS.get(r["app_id"])
+            emoji = entry[0] if entry else "📎"
+            return f"{emoji} {r['name']} [dim]({r['app_id']})[/dim]"
+
+        col_width = max(_display_width(_plain_label(r)) for r in results) + 2
 
         idx = 1
         for cat in sorted_cats:
@@ -257,11 +259,12 @@ def scan(ctx):
             for r in grouped[cat]:
                 entry = _APP_DESCRIPTIONS.get(r["app_id"])
                 desc = entry[2] if entry else _auto_describe(r["cmd_names"])
-                label = _label(r)
-                padded = _pad_to(label, col_width)
+                plain = _plain_label(r)
+                padding = " " * max(0, col_width - _display_width(plain))
+                rich = _rich_label(r)
                 mark = "  [green]✓[/green]" if r["installed"] else ""
                 console.print(
-                    f"  {idx:2d}.  {padded}[dim]|[/dim]  {desc}{mark}"
+                    f"  {idx:2d}.  {rich}{padding}[dim]|[/dim]  {desc}{mark}"
                 )
                 idx += 1
             console.print()
