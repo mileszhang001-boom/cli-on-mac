@@ -78,41 +78,41 @@ def _output(ctx: click.Context, data: str) -> None:
 
 
 def _print_summary() -> None:
-    """Print human-readable capability summary in Chinese."""
-    click.echo("clam-{{ app_id }} — {{ app_name }} 的命令行控制工具\n")
-    click.echo("核心能力:")
+    """Print human-readable capability summary."""
+    click.echo("{{ i18n.summary_full }}\n")
+    click.echo("{{ i18n.capabilities }}")
 {% if commands %}
-    click.echo("  ⚡ 执行操作    {{ commands | length }} 个命令{% if commands | length <= 8 %}：{{ commands | map(attribute='cli_name') | join('、') }}{% endif %}")
+    click.echo("  ⚡ {{ i18n.cap_execute }}    {{ commands | length }} {{ i18n.unit_commands }}{% if commands | length <= 8 %}{{ i18n.colon_sep }}{{ commands | map(attribute='cli_name') | join(i18n.join_sep) }}{% endif %}")
 {% endif %}
 {% if app_properties %}
 {%- set rw_props = [] %}
 {%- for p in app_properties %}{% if p.access == "rw" %}{% if rw_props.append(p) %}{% endif %}{% endif %}{% endfor %}
-    click.echo("  📊 读写状态    {{ app_properties | length }} 个属性{% if rw_props %}（{{ rw_props | length }} 个可写）{% endif %}")
+    click.echo("  📊 {{ i18n.cap_rw }}    {{ app_properties | length }} {{ i18n.unit_properties }}{% if rw_props %} ({{ rw_props | length }} {{ i18n.unit_writable }}){% endif %}")
 {% endif %}
 {% for group in nested_groups %}
-    click.echo("  🔍 {{ group.as_name }}    {{ group.properties | length }} 个属性可深层访问")
+    click.echo("  🔍 {{ group.as_name }}    {{ group.properties | length }} {{ i18n.deep_access }}")
 {% endfor %}
     click.echo("")
-    click.echo("快速上手:")
+    click.echo("{{ i18n.quickstart }}")
 {% if commands %}
     click.echo("  $ clam-{{ app_id }} {{ commands[0].cli_name }}{{ '                    ' + commands[0].description if commands[0].description else '' }}")
 {% endif %}
 {% if app_properties %}
-    click.echo("  $ clam-{{ app_id }} get-{{ app_properties[0].cli_name }}{{ '           读取' + app_properties[0].description_short if app_properties[0].description_short else '' }}")
+    click.echo("  $ clam-{{ app_id }} get-{{ app_properties[0].cli_name }}{{ '           ' + i18n.read_prefix + app_properties[0].description_short if app_properties[0].description_short else '' }}")
 {% if app_properties[0].access == "rw" %}
-    click.echo("  $ clam-{{ app_id }} set-{{ app_properties[0].cli_name }} <值>    设置{{ app_properties[0].description_short }}")
+    click.echo("  $ clam-{{ app_id }} set-{{ app_properties[0].cli_name }} <value>    {{ i18n.set_prefix }}{{ app_properties[0].description_short }}")
 {% endif %}
 {% endif %}
 {% if nested_groups %}
-    click.echo("  $ clam-{{ app_id }} get-{{ nested_groups[0].cli_name }}           获取{{ nested_groups[0].as_name }}的全部信息")
+    click.echo("  $ clam-{{ app_id }} get-{{ nested_groups[0].cli_name }}           {{ i18n.get_all_info }}")
 {% endif %}
     click.echo("")
-    click.echo("查看完整 API（供 AI 工具使用）:")
+    click.echo("{{ i18n.view_api }}")
     click.echo("  $ clam-{{ app_id }} api")
 
 
 class _ClamGroup(click.Group):
-    """Custom group that shows Chinese summary instead of raw command list."""
+    """Custom group that shows summary instead of raw command list."""
 
     def format_help(self, ctx, formatter):
         _print_summary()
@@ -135,26 +135,26 @@ def cli(ctx: click.Context, use_json: bool) -> None:
 
 @cli.command(name="api")
 def api_cmd() -> None:
-    """查看完整 API 列表（供 AI 工具使用）"""
+    """{{ i18n.api_docstring }}"""
 {% if commands %}
-    click.echo("操作命令:")
+    click.echo("{{ i18n.action_commands }}")
 {% for cmd in commands %}
     click.echo("  {{ cmd.cli_name.ljust(30) }} {{ cmd.description }}")
 {% endfor %}
 {% endif %}
 {% if app_properties %}
     click.echo("")
-    click.echo("属性 (get/set):")
+    click.echo("{{ i18n.properties_getset }}")
 {% for prop in app_properties %}
-    click.echo("  get-{{ prop.cli_name.ljust(26) }} {{ prop.description_short }}{% if prop.access == 'rw' %}  [可写: set-{{ prop.cli_name }}]{% endif %}")
+    click.echo("  get-{{ prop.cli_name.ljust(26) }} {{ prop.description_short }}{% if prop.access == 'rw' %}  [{{ i18n.writable_prefix }}{{ prop.cli_name }}]{% endif %}")
 {% endfor %}
 {% endif %}
 {% for group in nested_groups %}
     click.echo("")
-    click.echo("{{ group.as_name }} ({{ group.class_name }}) 属性:")
-    click.echo("  get-{{ group.cli_name.ljust(26) }} 获取全部属性 (JSON)")
+    click.echo("{{ group.as_name }} ({{ group.class_name }}) {{ i18n.prop_suffix }}")
+    click.echo("  get-{{ group.cli_name.ljust(26) }} {{ i18n.get_all_json }}")
 {% for prop in group.properties %}
-    click.echo("  get-{{ group.cli_name }}-{{ prop.cli_name.ljust(26 - group.cli_name | length - 1) }} {{ prop.as_name }}{% if prop.access == 'rw' %}  [可写]{% endif %}")
+    click.echo("  get-{{ group.cli_name }}-{{ prop.cli_name.ljust(26 - group.cli_name | length - 1) }} {{ prop.as_name }}{% if prop.access == 'rw' %}  [{{ i18n.writable_label }}]{% endif %}")
 {% endfor %}
 {% endfor %}
 

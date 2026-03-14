@@ -40,7 +40,7 @@ class TestScan:
     def test_scan_human_mode(self, runner):
         result = runner.invoke(cli, ["scan"])
         assert result.exit_code == 0
-        assert "扫描完成" in result.output
+        assert "Scan complete" in result.output or "扫描完成" in result.output
 
     def test_scan_json_finder_present(self, runner):
         result = runner.invoke(cli, ["--json", "scan"])
@@ -129,7 +129,7 @@ class TestDoctor:
     def test_doctor_human_mode(self, runner):
         result = runner.invoke(cli, ["doctor", "music"])
         assert result.exit_code == 0
-        assert "可靠性检查" in result.output
+        assert "reliability" in result.output or "可靠性检查" in result.output
 
     def test_doctor_not_found(self, runner):
         result = runner.invoke(cli, ["doctor", "nonexistent_xyz"])

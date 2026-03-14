@@ -1,7 +1,4 @@
-"""clam — CLI Agent for Mac。
-
-扫描你的 Mac，发现可被 AI 操控的应用，一键生成 CLI 接口。
-"""
+"""clam — CLI Agent for Mac."""
 
 from __future__ import annotations
 
@@ -9,6 +6,7 @@ import sys
 
 import click
 
+from clam.i18n import get_lang, init_lang, save_lang, set_lang, t
 from clam.output import console, error, output, status, success
 from clam.registry import registry
 from clam.scanner.app_scanner import find_app, find_basic_app, scan_applications, suggest_app
@@ -23,21 +21,21 @@ from clam.generator.installer import install_wrapper, uninstall_wrapper
 
 
 def _display_width(s: str) -> int:
-    """计算字符串在终端中的显示宽度（处理中文、emoji 宽度差异）。"""
+    """Compute terminal display width of a string (handles CJK, emoji)."""
     import unicodedata
     w = 0
     for ch in s:
         cp = ord(ch)
-        if ch == "\ufe0f":                         # 变体选择符，不占宽度
+        if ch == "\ufe0f":
             continue
         eaw = unicodedata.east_asian_width(ch)
-        if eaw in ("W", "F"):                      # 中日韩宽字符
+        if eaw in ("W", "F"):
             w += 2
-        elif 0x1F000 <= cp <= 0x1FFFF:             # 补充 emoji 区
+        elif 0x1F000 <= cp <= 0x1FFFF:
             w += 2
-        elif 0x2600 <= cp <= 0x27BF:               # 杂项符号 & 丁巴特
+        elif 0x2600 <= cp <= 0x27BF:
             w += 2
-        elif 0x2300 <= cp <= 0x23FF:               # 杂项技术符号 (⏱ 等)
+        elif 0x2300 <= cp <= 0x23FF:
             w += 2
         else:
             w += 1
@@ -45,77 +43,77 @@ def _display_width(s: str) -> int:
 
 
 def _pad_to(s: str, target: int) -> str:
-    """将字符串用空格补齐到 target 个显示列宽。"""
+    """Pad string with spaces to reach target display width."""
     current = _display_width(s)
     return s + " " * max(0, target - current)
 
 
-# ── 每个应用的人类可读能力描述 ──────────────────────────────────────────────
-# app_id → (emoji, 类别, 核心能力)
+# ── App descriptions ────────────────────────────────────────────────────────
+# app_id → (emoji, category_key, description_key)
 _APP_DESCRIPTIONS: dict[str, tuple[str, str, str]] = {
-    # 媒体
-    "music":              ("🎵", "媒体", "控制播放、切歌、音量调节、曲目查询"),
-    "tv":                 ("📺", "媒体", "视频播放、切集、音量调节、播放列表管理"),
-    "quicktime-player":   ("🎬", "媒体", "视频播放、录屏、录音、导出裁剪"),
-    "garageband":         ("🎸", "媒体", "音乐制作预览"),
-    "photos":             ("📷", "媒体", "照片导入导出、相册管理、幻灯片放映"),
-    "spotify":            ("🎵", "媒体", "播放控制、切歌、播放列表、音量调节"),
-    "qqmusic":            ("🎵", "媒体", "播放控制、切歌、歌单管理"),
-    # 浏览器
-    "google-chrome":      ("🌐", "浏览器", "打开网页、管理标签页、页面导航"),
-    "safari":             ("🌐", "浏览器", "打开网页、管理标签页、书签、阅读列表"),
-    "arc":                ("🌐", "浏览器", "打开网页、管理标签页、页面导航"),
-    "doubao":             ("🌐", "浏览器", "打开网页、管理标签页、书签操作"),
-    # 办公
-    "microsoft-word":     ("📝", "办公", "文档编辑、格式设置、表格、批量排版"),
-    "microsoft-excel":    ("📊", "办公", "电子表格、图表、公式计算、数据处理"),
-    "microsoft-powerpoint": ("📊", "办公", "幻灯片制作、动画设置、演示控制"),
-    "microsoft-outlook":  ("📧", "办公", "邮件收发、日程管理、联系人"),
-    "keynote":            ("📊", "办公", "幻灯片制作、导出、演示控制"),
-    "pages":              ("📝", "办公", "文档编辑、排版、表格、导出"),
-    "numbers":            ("📊", "办公", "电子表格、行列操作、排序、导出"),
-    "notion":             ("📝", "办公", "文档编辑、知识库、项目管理"),
-    "obsidian":           ("📝", "办公", "笔记编辑、双向链接、知识图谱"),
-    # 效率
-    "mail":               ("📧", "效率", "发送邮件、搜索、管理邮箱"),
-    "calendar":           ("📅", "效率", "创建/查询日程、视图切换"),
-    "contacts":           ("👤", "效率", "联系人管理、搜索查询"),
-    "messages":           ("💬", "效率", "发送消息"),
-    "notes":              ("📝", "效率", "创建/搜索/编辑备忘录"),
-    "reminders":          ("✅", "效率", "查看提醒事项、待办管理"),
-    "ticktick":           ("✅", "效率", "任务查询、添加待办、番茄钟"),
-    # 通信
-    "telegram":           ("💬", "通信", "消息收发、群组管理"),
-    "wechat":             ("💬", "通信", "消息收发、文件传输"),
-    "qq":                 ("💬", "通信", "消息收发、文件传输"),
-    "dingtalk":           ("💬", "通信", "消息收发、审批、考勤"),
-    "lark":               ("💬", "通信", "消息收发、文档协作、日程"),
-    "discord":            ("💬", "通信", "消息收发、语音频道"),
-    "slack":              ("💬", "通信", "消息收发、频道管理、集成"),
-    "zoom":               ("📹", "通信", "视频会议、屏幕共享"),
-    # 设计
-    "figma":              ("🎨", "设计", "对象操作、文本排版、矢量编辑、图层管理"),
-    # 开发
-    "xcode":              ("🔨", "开发", "项目构建、运行、测试、调试"),
-    "visual-studio-code": ("💻", "开发", "代码编辑、终端、扩展、调试"),
-    "cursor":             ("💻", "开发", "AI 代码编辑、终端、调试"),
-    # 系统
-    "finder":             ("📂", "系统", "文件管理、窗口视图、前往目录、标签"),
-    "terminal":           ("💻", "系统", "执行脚本、窗口设置"),
-    "system-settings":    ("🔧", "系统", "系统设置查看与修改"),
-    "shortcuts":          ("🔗", "系统", "运行快捷指令"),
-    # 工具
-    "amphetamine":        ("🔋", "工具", "防休眠控制、会话管理"),
-    "flow":               ("🕐", "工具", "专注计时、番茄钟、阶段控制"),
-    "the-unarchiver":     ("📦", "工具", "文件解压"),
-    "bluetooth-file-exchange": ("📡", "工具", "蓝牙文件收发"),
-    "screen-sharing":     ("🖥️", "工具", "远程屏幕共享"),
-    "console":            ("🔍", "工具", "系统日志查看"),
-    "clashx-pro":         ("🌐", "工具", "网络代理、规则切换"),
-    "chatgpt-atlas":      ("🤖", "工具", "AI 对话"),
+    # Media
+    "music":              ("🎵", "cat.media", "app.desc.music"),
+    "tv":                 ("📺", "cat.media", "app.desc.tv"),
+    "quicktime-player":   ("🎬", "cat.media", "app.desc.quicktime-player"),
+    "garageband":         ("🎸", "cat.media", "app.desc.garageband"),
+    "photos":             ("📷", "cat.media", "app.desc.photos"),
+    "spotify":            ("🎵", "cat.media", "app.desc.spotify"),
+    "qqmusic":            ("🎵", "cat.media", "app.desc.qqmusic"),
+    # Browser
+    "google-chrome":      ("🌐", "cat.browser", "app.desc.google-chrome"),
+    "safari":             ("🌐", "cat.browser", "app.desc.safari"),
+    "arc":                ("🌐", "cat.browser", "app.desc.arc"),
+    "doubao":             ("🌐", "cat.browser", "app.desc.doubao"),
+    # Office
+    "microsoft-word":     ("📝", "cat.office", "app.desc.microsoft-word"),
+    "microsoft-excel":    ("📊", "cat.office", "app.desc.microsoft-excel"),
+    "microsoft-powerpoint": ("📊", "cat.office", "app.desc.microsoft-powerpoint"),
+    "microsoft-outlook":  ("📧", "cat.office", "app.desc.microsoft-outlook"),
+    "keynote":            ("📊", "cat.office", "app.desc.keynote"),
+    "pages":              ("📝", "cat.office", "app.desc.pages"),
+    "numbers":            ("📊", "cat.office", "app.desc.numbers"),
+    "notion":             ("📝", "cat.office", "app.desc.notion"),
+    "obsidian":           ("📝", "cat.office", "app.desc.obsidian"),
+    # Productivity
+    "mail":               ("📧", "cat.productivity", "app.desc.mail"),
+    "calendar":           ("📅", "cat.productivity", "app.desc.calendar"),
+    "contacts":           ("👤", "cat.productivity", "app.desc.contacts"),
+    "messages":           ("💬", "cat.productivity", "app.desc.messages"),
+    "notes":              ("📝", "cat.productivity", "app.desc.notes"),
+    "reminders":          ("✅", "cat.productivity", "app.desc.reminders"),
+    "ticktick":           ("✅", "cat.productivity", "app.desc.ticktick"),
+    # Communication
+    "telegram":           ("💬", "cat.communication", "app.desc.telegram"),
+    "wechat":             ("💬", "cat.communication", "app.desc.wechat"),
+    "qq":                 ("💬", "cat.communication", "app.desc.qq"),
+    "dingtalk":           ("💬", "cat.communication", "app.desc.dingtalk"),
+    "lark":               ("💬", "cat.communication", "app.desc.lark"),
+    "discord":            ("💬", "cat.communication", "app.desc.discord"),
+    "slack":              ("💬", "cat.communication", "app.desc.slack"),
+    "zoom":               ("📹", "cat.communication", "app.desc.zoom"),
+    # Design
+    "figma":              ("🎨", "cat.design", "app.desc.figma"),
+    # Development
+    "xcode":              ("🔨", "cat.development", "app.desc.xcode"),
+    "visual-studio-code": ("💻", "cat.development", "app.desc.visual-studio-code"),
+    "cursor":             ("💻", "cat.development", "app.desc.cursor"),
+    # System
+    "finder":             ("📂", "cat.system", "app.desc.finder"),
+    "terminal":           ("💻", "cat.system", "app.desc.terminal"),
+    "system-settings":    ("🔧", "cat.system", "app.desc.system-settings"),
+    "shortcuts":          ("🔗", "cat.system", "app.desc.shortcuts"),
+    # Tools
+    "amphetamine":        ("🔋", "cat.tools", "app.desc.amphetamine"),
+    "flow":               ("🕐", "cat.tools", "app.desc.flow"),
+    "the-unarchiver":     ("📦", "cat.tools", "app.desc.the-unarchiver"),
+    "bluetooth-file-exchange": ("📡", "cat.tools", "app.desc.bluetooth-file-exchange"),
+    "screen-sharing":     ("🖥️", "cat.tools", "app.desc.screen-sharing"),
+    "console":            ("🔍", "cat.tools", "app.desc.console"),
+    "clashx-pro":         ("🌐", "cat.tools", "app.desc.clashx-pro"),
+    "chatgpt-atlas":      ("🤖", "cat.tools", "app.desc.chatgpt-atlas"),
 }
 
-# macOS 内部组件，对用户无意义，从 scan 结果中隐藏
+# macOS internal components, hidden from scan results
 _HIDDEN_APPS: set[str] = {
     "applescript-utility",
     "folder-actions-dispatcher",
@@ -126,40 +124,44 @@ _HIDDEN_APPS: set[str] = {
     "voiceover",
 }
 
+# Category display order (by key)
+_CAT_ORDER = [
+    "cat.office", "cat.design", "cat.media", "cat.browser",
+    "cat.communication", "cat.productivity", "cat.development",
+    "cat.system", "cat.tools", "cat.other",
+]
+
 
 def _auto_describe(cmd_names: list[str]) -> str:
-    """根据命令名自动生成能力描述（用于未收录应用的兜底）。"""
+    """Auto-generate capability description from command names."""
     caps: list[str] = []
     names = {n.lower() for n in cmd_names}
     if names & {"play", "pause", "stop", "playpause", "resume"}:
-        caps.append("播放控制")
+        caps.append(t("cap.playback"))
     if names & {"next-track", "previous-track", "back-track"}:
-        caps.append("切歌")
+        caps.append(t("cap.track_switch"))
     if names & {"reload", "go-back", "go-forward"}:
-        caps.append("页面导航")
+        caps.append(t("cap.navigation"))
     if names & {"send", "reply", "forward"}:
-        caps.append("消息收发")
+        caps.append(t("cap.messaging"))
     if names & {"search", "find"}:
-        caps.append("搜索")
+        caps.append(t("cap.search"))
     if names & {"export", "import"}:
-        caps.append("导入导出")
+        caps.append(t("cap.import_export"))
     if names & {"build", "run", "test"}:
-        caps.append("构建运行")
+        caps.append(t("cap.build_run"))
     if names & {"start", "stop", "reset"}:
-        caps.append("启停控制")
+        caps.append(t("cap.start_stop"))
     if not caps:
-        caps.append("脚本化操作")
-    return "、".join(caps[:4])
+        caps.append(t("cap.scriptable"))
+    return t("join.comma").join(caps[:4])
 
 
 @click.group()
-@click.option("--json", "use_json", is_flag=True, help="输出 JSON 格式，供 AI 工具解析")
+@click.option("--json", "use_json", is_flag=True, help=t("cli.help_json"))
 @click.pass_context
 def cli(ctx, use_json):
-    """clam — CLI Agent for Mac
-
-    扫描你的 Mac，发现可被 AI 操控的应用，一键生成 CLI 接口。
-    """
+    """clam — CLI Agent for Mac"""
     ctx.ensure_object(dict)
     ctx.obj["json"] = use_json
 
@@ -167,21 +169,19 @@ def cli(ctx, use_json):
 @cli.command()
 @click.pass_context
 def scan(ctx):
-    """扫描本地可脚本化应用"""
+    """Scan local scriptable apps / \u626b\u63cf\u672c\u5730\u53ef\u811a\u672c\u5316\u5e94\u7528"""
     json_mode = ctx.obj["json"]
 
     if not json_mode:
-        status("🔍 正在扫描本地应用…")
+        status(f"\U0001f50d {t('scan.scanning')}")
 
     apps = scan_applications()
 
-    # 解析每个应用获取命令/属性数量
     results = []
     for app in apps:
         if app.app_id in _HIDDEN_APPS:
             continue
         if app.sdef_path:
-            # 完整模式：解析 sdef
             try:
                 sdef_info = parse_sdef(app.sdef_path, app.name)
                 wrapper_info = get_wrapper_info(sdef_info)
@@ -199,7 +199,6 @@ def scan(ctx):
             except Exception:
                 continue
         else:
-            # UI Scripting / 基础模式：无 sdef，使用描述信息
             results.append({
                 "name": app.name,
                 "app_id": app.app_id,
@@ -213,56 +212,53 @@ def scan(ctx):
             })
 
     if json_mode:
-        # JSON 模式不输出 cmd_names
         json_results = [{k: v for k, v in r.items() if k != "cmd_names"} for r in results]
         output(json_results, json_mode=True)
     else:
         if not results:
-            console.print("未发现可脚本化应用")
+            console.print(t("scan.no_apps"))
             return
 
         console.print(
-            f"\n🔍 [bold]扫描完成[/bold] — "
-            f"发现 {len(results)} 个可脚本化应用"
+            f"\n\U0001f50d [bold]{t('scan.done')}[/bold] — "
+            f"{t('scan.found', count=len(results))}"
         )
 
-        # 按类别分组
         from collections import defaultdict
 
         grouped: dict[str, list[dict]] = defaultdict(list)
         for r in results:
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
-            cat = entry[1] if entry else "其他"
-            grouped[cat].append(r)
+            cat_key = entry[1] if entry else "cat.other"
+            grouped[cat_key].append(r)
 
-        cat_order = ["办公", "设计", "媒体", "浏览器", "通信", "效率", "开发", "系统", "工具", "其他"]
-        sorted_cats = sorted(grouped.keys(), key=lambda c: cat_order.index(c) if c in cat_order else 99)
+        sorted_cats = sorted(
+            grouped.keys(),
+            key=lambda c: _CAT_ORDER.index(c) if c in _CAT_ORDER else 99,
+        )
 
-        # 计算最长「emoji+名称」的显示宽度以对齐竖线
         def _plain_label(r):
-            """纯文本标签（用于计算对齐宽度）。"""
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
-            emoji = entry[0] if entry else "📎"
+            emoji = entry[0] if entry else "\U0001f4ce"
             return f"{emoji} {r['name']} ({r['app_id']})"
 
         def _rich_label(r):
-            """Rich 格式标签（用于显示）。"""
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
-            emoji = entry[0] if entry else "📎"
+            emoji = entry[0] if entry else "\U0001f4ce"
             return f"{emoji} {r['name']} [dim]({r['app_id']})[/dim]"
 
         col_width = max(_display_width(_plain_label(r)) for r in results) + 2
 
         idx = 1
-        for cat in sorted_cats:
-            console.rule(f"[bold]{cat}[/bold]", style="dim")
-            for r in grouped[cat]:
+        for cat_key in sorted_cats:
+            console.rule(f"[bold]{t(cat_key)}[/bold]", style="dim")
+            for r in grouped[cat_key]:
                 entry = _APP_DESCRIPTIONS.get(r["app_id"])
-                desc = entry[2] if entry else _auto_describe(r["cmd_names"])
+                desc = t(entry[2]) if entry else _auto_describe(r["cmd_names"])
                 plain = _plain_label(r)
                 padding = " " * max(0, col_width - _display_width(plain))
                 rich = _rich_label(r)
-                mark = "  [green]✓[/green]" if r["installed"] else ""
+                mark = "  [green]\u2713[/green]" if r["installed"] else ""
                 console.print(
                     f"  {idx:2d}.  {rich}{padding}[dim]|[/dim]  {desc}{mark}"
                 )
@@ -270,18 +266,17 @@ def scan(ctx):
             console.print()
 
         console.print(
-            "[dim]💡 试一试: clam install music  |  "
-            "详情: clam info music[/dim]"
+            f"[dim]\U0001f4a1 {t('scan.hint')}[/dim]"
         )
 
 
 def _app_not_found(app_name: str) -> None:
-    """输出未找到应用的错误信息。"""
+    """Output app-not-found error."""
     suggestions = suggest_app(app_name)
     if suggestions:
-        error(f"未找到应用: {app_name}，你是不是想找: {', '.join(suggestions)}")
+        error(t("err.app_not_found", name=app_name, suggestions=", ".join(suggestions)))
     else:
-        error(f"未找到应用: {app_name}，运行 clam scan 查看可用应用")
+        error(t("err.app_not_found_generic", name=app_name))
     sys.exit(1)
 
 
@@ -289,7 +284,7 @@ def _app_not_found(app_name: str) -> None:
 @click.argument("app_name")
 @click.pass_context
 def install(ctx, app_name):
-    """安装应用的 CLI wrapper"""
+    """Install CLI wrapper for an app / \u5b89\u88c5\u5e94\u7528\u7684 CLI wrapper"""
     json_mode = ctx.obj["json"]
 
     app = find_app(app_name)
@@ -298,68 +293,62 @@ def install(ctx, app_name):
     if not app:
         _app_not_found(app_name)
 
-    mode = "full"  # "full", "ui", "basic"
+    mode = "full"
     menu_scan = None
     if not app.sdef_path:
-        # 无 sdef — 尝试 UI Scripting 模式：探测菜单
         if not json_mode:
-            status(f"🔍 正在探测 {app.name} 的菜单结构…")
+            status(f"\U0001f50d {t('install.probing_menus', name=app.name)}")
         menu_scan = scan_menus(app.name, app.process_name or None)
         if menu_scan and menu_scan.total_items > 0:
             mode = "ui"
         else:
             mode = "basic"
 
-    mode_labels = {"full": "", "ui": "（UI Scripting 模式）", "basic": "（基础模式）"}
+    mode_label = t(f"install.mode.{mode}")
     if not json_mode:
-        status(f"📦 正在为 {app.name} 生成 CLI wrapper{mode_labels[mode]}…")
+        status(f"\U0001f4e6 {t('install.generating', name=app.name, mode=mode_label)}")
 
     wrapper_dir = registry.REGISTRY_DIR / "wrappers" / app.app_id
 
     if mode == "basic":
-        # 基础模式：仅标准套件命令
         try:
             generate_basic_wrapper(app.name, wrapper_dir)
         except Exception as e:
-            error(f"生成 wrapper 失败: {e}")
+            error(t("install.gen_failed", error=e))
             sys.exit(1)
-        cmd_count = 3   # activate, quit-app, open-file
-        prop_count = 3  # get-name, get-version, get-frontmost
+        cmd_count = 3
+        prop_count = 3
     elif mode == "ui":
-        # UI Scripting 模式：通过菜单点击控制
         try:
             generate_ui_wrapper(app.name, menu_scan.process_name, menu_scan, wrapper_dir)
         except Exception as e:
-            error(f"生成 wrapper 失败: {e}")
+            error(t("install.gen_failed", error=e))
             sys.exit(1)
         ui_info = get_ui_wrapper_info(menu_scan)
-        cmd_count = ui_info["menu_cmd_count"] + 3  # menu commands + activate/quit/open
-        prop_count = 3  # get-name, get-version, get-frontmost
+        cmd_count = ui_info["menu_cmd_count"] + 3
+        prop_count = 3
     else:
-        # 完整模式：解析 sdef
         try:
             sdef_info = parse_sdef(app.sdef_path, app.name)
         except Exception as e:
-            error(f"解析 sdef 失败: {e}")
+            error(t("install.sdef_failed", error=e))
             sys.exit(1)
         try:
             generate_wrapper(sdef_info, wrapper_dir)
         except Exception as e:
-            error(f"生成 wrapper 失败: {e}")
+            error(t("install.gen_failed", error=e))
             sys.exit(1)
         wrapper_info = get_wrapper_info(sdef_info)
         cmd_count = len(wrapper_info["commands"])
         prop_count = len(wrapper_info["properties"])
 
     if not json_mode:
-        status(f"📦 正在安装 clam-{app.app_id}…")
+        status(f"\U0001f4e6 {t('install.installing', app_id=app.app_id)}")
 
-    # pip install
     if not install_wrapper(app.app_id, wrapper_dir):
-        error("pip install 失败")
+        error(t("install.pip_failed"))
         sys.exit(1)
 
-    # 注册
     registry.register(
         app_id=app.app_id,
         app_name=app.name,
@@ -380,27 +369,27 @@ def install(ctx, app_name):
     else:
         ep = f"clam-{app.app_id}"
         if mode == "basic":
-            success(f"{app.name} 已安装 → [bold]{ep}[/bold]  [dim]（基础模式）[/dim]")
-            console.print(f"   命令: {cmd_count} 个  |  属性: {prop_count} 个")
-            console.print(f"\n   [dim]快速上手:[/dim]")
-            console.print(f"   [dim]  $ {ep} activate       前置窗口[/dim]")
-            console.print(f"   [dim]  $ {ep} get-version    查看版本[/dim]")
-            console.print(f"   [dim]  $ {ep} quit-app       退出应用[/dim]")
+            success(t("install.success_basic", name=app.name, ep=ep))
+            console.print(f"   {t('install.cmd_prop', cmds=cmd_count, props=prop_count)}")
+            console.print(f"\n   [dim]{t('install.quickstart')}[/dim]")
+            console.print(f"   [dim]  $ {ep} activate       {t('install.activate_hint')}[/dim]")
+            console.print(f"   [dim]  $ {ep} get-version    {t('install.version_hint')}[/dim]")
+            console.print(f"   [dim]  $ {ep} quit-app       {t('install.quit_hint')}[/dim]")
         elif mode == "ui":
             ui_info = get_ui_wrapper_info(menu_scan)
-            success(f"{app.name} 已安装 → [bold]{ep}[/bold]  [dim]（UI Scripting 模式）[/dim]")
-            console.print(f"   菜单命令: {ui_info['menu_cmd_count']} 个  |  基础命令: 6 个")
-            console.print(f"\n   [dim]快速上手:[/dim]")
+            success(t("install.success_ui", name=app.name, ep=ep))
+            console.print(f"   {t('install.menu_cmd', menus=ui_info['menu_cmd_count'])}")
+            console.print(f"\n   [dim]{t('install.quickstart')}[/dim]")
             for g in ui_info["menu_groups"][:2]:
                 if g.items:
                     item = g.items[0]
                     console.print(f"   [dim]  $ {ep} {item.cli_name:<20}{item.name}[/dim]")
-            console.print(f"   [dim]  $ {ep} activate            前置窗口[/dim]")
+            console.print(f"   [dim]  $ {ep} activate            {t('install.activate_hint')}[/dim]")
         else:
             nested_count = len(wrapper_info["nested_groups"])
-            nested_str = f"  |  嵌套对象: {nested_count} 个" if nested_count else ""
-            success(f"{app.name} 已安装 → [bold]{ep}[/bold]")
-            console.print(f"   命令: {cmd_count} 个  |  属性: {prop_count} 个{nested_str}")
+            nested_str = t("install.nested_count", count=nested_count) if nested_count else ""
+            success(t("install.success_full", name=app.name, ep=ep))
+            console.print(f"   {t('install.cmd_prop', cmds=cmd_count, props=prop_count)}{nested_str}")
 
             example_cmds = []
             if wrapper_info["properties"]:
@@ -413,22 +402,22 @@ def install(ctx, app_name):
                 first_group = wrapper_info["nested_groups"][0]
                 example_cmds.append(f"{ep} get-{first_group.cli_name}")
 
-            console.print(f"\n   [dim]快速上手:[/dim]")
+            console.print(f"\n   [dim]{t('install.quickstart')}[/dim]")
             for ex in example_cmds[:3]:
                 console.print(f"   [dim]  $ {ex}[/dim]")
 
-        console.print(f"   [dim]  $ {ep}         查看能力概括[/dim]")
-        console.print(f"   [dim]  $ {ep} api     查看完整 API[/dim]")
+        console.print(f"   [dim]  $ {ep}         {t('install.view_summary')}[/dim]")
+        console.print(f"   [dim]  $ {ep} api     {t('install.view_api')}[/dim]")
         console.print()
-        console.print("   [bold]AI 工具集成:[/bold]")
-        console.print(f"   已配置完成，AI 可直接在终端调用 [cyan]{ep}[/cyan] 的所有命令。")
-        console.print(f"   查看 AI 集成指南: [dim]clam --json info {app.app_id}[/dim]")
+        console.print(f"   [bold]{t('install.ai_title')}[/bold]")
+        console.print(f"   {t('install.ai_configured', ep=ep)}")
+        console.print(f"   {t('install.ai_guide', app_id=app.app_id)}")
 
 
 @cli.command(name="list")
 @click.pass_context
 def list_cmd(ctx):
-    """查看已安装的 wrapper"""
+    """List installed wrappers / \u67e5\u770b\u5df2\u5b89\u88c5\u7684 wrapper"""
     json_mode = ctx.obj["json"]
     wrappers = registry.list_all()
 
@@ -437,22 +426,20 @@ def list_cmd(ctx):
         return
 
     if not wrappers:
-        console.print(
-            "尚未安装任何 wrapper，运行 [bold]clam scan[/bold] 查看可用应用"
-        )
+        console.print(t("list.empty"))
         return
 
     from rich.table import Table
     table = Table(
-        title="已安装的 wrapper",
+        title=t("list.title"),
         show_header=True,
         header_style="bold cyan",
     )
-    table.add_column("应用", style="bold")
-    table.add_column("入口命令")
-    table.add_column("命令", justify="right")
-    table.add_column("属性", justify="right")
-    table.add_column("安装时间")
+    table.add_column(t("list.col.app"), style="bold")
+    table.add_column(t("list.col.entry"))
+    table.add_column(t("list.col.commands"), justify="right")
+    table.add_column(t("list.col.properties"), justify="right")
+    table.add_column(t("list.col.installed_at"))
 
     for app_id, info in wrappers.items():
         table.add_row(
@@ -469,11 +456,7 @@ def list_cmd(ctx):
 @click.argument("app_name")
 @click.pass_context
 def info(ctx, app_name):
-    """查看应用的命令和属性清单
-
-    对 AI agent 集成最关键 — agent 先 clam info <app> --json
-    获取能力清单，再调 clam-<app> <command>。
-    """
+    """View app commands and properties / \u67e5\u770b\u5e94\u7528\u7684\u547d\u4ee4\u548c\u5c5e\u6027\u6e05\u5355"""
     json_mode = ctx.obj["json"]
 
     app = find_app(app_name)
@@ -483,16 +466,14 @@ def info(ctx, app_name):
     try:
         sdef_info = parse_sdef(app.sdef_path, app.name)
     except Exception as e:
-        error(f"解析 sdef 失败: {e}")
+        error(t("install.sdef_failed", error=e))
         sys.exit(1)
 
     wrapper_info = get_wrapper_info(sdef_info)
     commands = wrapper_info["commands"]
     properties = wrapper_info["properties"]
-
     nested_groups = wrapper_info["nested_groups"]
 
-    # Build support map for JSON output
     support_results = check_command_support(sdef_info, app.app_id)
     support_map = {r["name"]: r["supported"] for r in support_results}
 
@@ -556,33 +537,32 @@ def info(ctx, app_name):
     else:
         from rich.table import Table
 
-        # 头部信息
         installed = registry.get(app.app_id)
         status_str = (
-            "[green]已安装[/green]" if installed else "[dim]未安装[/dim]"
+            f"[green]{t('info.installed')}[/green]" if installed
+            else f"[dim]{t('info.not_installed')}[/dim]"
         )
         console.print(f"\n[bold]{app.name}[/bold]  {status_str}")
         console.print(f"  SDEF: [dim]{app.sdef_path}[/dim]")
-        console.print(f"  入口: [bold]clam-{app.app_id}[/bold]")
+        console.print(f"  {t('info.entry')} [bold]clam-{app.app_id}[/bold]")
         nested_info = (
-            f"  |  嵌套对象: {len(nested_groups)} 个"
+            t("info.nested", count=len(nested_groups))
             if nested_groups else ""
         )
         console.print(
-            f"  命令: {len(commands)} 个  |  属性: {len(properties)} 个"
+            f"  {t('info.cmd_prop', cmds=len(commands), props=len(properties))}"
             f"{nested_info}\n"
         )
 
-        # 命令表格
         if commands:
             cmd_table = Table(
-                title="命令",
+                title=t("info.tbl.commands"),
                 show_header=True,
                 header_style="bold",
             )
-            cmd_table.add_column("命令名", style="cyan")
-            cmd_table.add_column("说明")
-            cmd_table.add_column("参数")
+            cmd_table.add_column(t("info.tbl.name"), style="cyan")
+            cmd_table.add_column(t("info.tbl.description"))
+            cmd_table.add_column(t("info.tbl.params"))
             for cmd in commands:
                 params_str = ""
                 if cmd.direct_param:
@@ -597,18 +577,17 @@ def info(ctx, app_name):
                 )
             console.print(cmd_table)
 
-        # 属性表格
         if properties:
             console.print()
             prop_table = Table(
-                title="属性 (get/set)",
+                title=t("info.tbl.properties"),
                 show_header=True,
                 header_style="bold",
             )
-            prop_table.add_column("属性名", style="cyan")
-            prop_table.add_column("访问", justify="center")
-            prop_table.add_column("类型")
-            prop_table.add_column("说明")
+            prop_table.add_column(t("info.tbl.prop_name"), style="cyan")
+            prop_table.add_column(t("info.tbl.access"), justify="center")
+            prop_table.add_column(t("info.tbl.type"))
+            prop_table.add_column(t("info.tbl.prop_desc"))
             for prop in properties:
                 access_str = (
                     "[green]rw[/green]"
@@ -620,17 +599,16 @@ def info(ctx, app_name):
                 )
             console.print(prop_table)
 
-        # 嵌套对象表格
         for group in nested_groups:
             console.print()
             grp_table = Table(
-                title=f"{group.as_name} ({group.class_name}) 属性",
+                title=t("info.nested_title", name=group.as_name, class_name=group.class_name),
                 show_header=True,
                 header_style="bold",
             )
-            grp_table.add_column("命令", style="cyan")
-            grp_table.add_column("访问", justify="center")
-            grp_table.add_column("类型")
+            grp_table.add_column(t("info.tbl.command"), style="cyan")
+            grp_table.add_column(t("info.tbl.access"), justify="center")
+            grp_table.add_column(t("info.tbl.type"))
             for prop in group.properties:
                 access_str = (
                     "[green]rw[/green]"
@@ -643,7 +621,7 @@ def info(ctx, app_name):
                 )
             console.print(grp_table)
             console.print(
-                f"  [dim]复合命令: get-{group.cli_name} → JSON[/dim]"
+                f"  [dim]{t('info.compound_cmd', name=group.cli_name)}[/dim]"
             )
 
 
@@ -651,7 +629,7 @@ def info(ctx, app_name):
 @click.argument("app_name")
 @click.pass_context
 def doctor(ctx, app_name):
-    """检查应用命令的可靠性（参数类型分析）"""
+    """Check command reliability / \u68c0\u67e5\u547d\u4ee4\u53ef\u9760\u6027"""
     json_mode = ctx.obj["json"]
 
     app = find_app(app_name)
@@ -661,7 +639,7 @@ def doctor(ctx, app_name):
     try:
         sdef_info = parse_sdef(app.sdef_path, app.name)
     except Exception as e:
-        error(f"解析 sdef 失败: {e}")
+        error(t("install.sdef_failed", error=e))
         sys.exit(1)
 
     results = check_command_support(sdef_info, app.app_id)
@@ -677,17 +655,17 @@ def doctor(ctx, app_name):
             "commands": results,
         }, json_mode=True)
     else:
-        console.print(f"\n[bold]{app.name}[/bold] 命令可靠性检查\n")
+        console.print(f"\n[bold]{app.name}[/bold] {t('doctor.title', name='')}\n")
         console.print(
-            f"  [green]✓ {len(supported)}[/green] / {len(results)} 个命令完全支持"
+            f"  [green]{t('doctor.supported', n=len(supported), total=len(results))}[/green]"
         )
         if unsupported:
             console.print(
-                f"  [yellow]⚠ {len(unsupported)}[/yellow] 个命令含复杂参数类型（可能不可用）\n"
+                f"  [yellow]{t('doctor.unsupported', n=len(unsupported))}[/yellow]\n"
             )
             for r in unsupported:
-                issues = "、".join(r["issues"])
-                console.print(f"    [yellow]⚠[/yellow] {r['name']} — {issues}")
+                issues = t("join.comma").join(r["issues"])
+                console.print(f"    [yellow]\u26a0[/yellow] {r['name']} — {issues}")
         console.print()
 
 
@@ -695,10 +673,9 @@ def doctor(ctx, app_name):
 @click.argument("app_name")
 @click.pass_context
 def remove(ctx, app_name):
-    """卸载应用的 CLI wrapper"""
+    """Uninstall CLI wrapper / \u5378\u8f7d CLI wrapper"""
     json_mode = ctx.obj["json"]
 
-    # 在已安装列表中查找
     needle = app_name.lower().strip()
     wrappers = registry.list_all()
 
@@ -709,15 +686,28 @@ def remove(ctx, app_name):
             break
 
     if not app_id:
-        error(f"未找到已安装的 wrapper: {app_name}")
+        error(t("remove.not_found", name=app_name))
         sys.exit(1)
 
     if not json_mode:
-        status(f"🗑  正在卸载 clam-{app_id}…")
+        status(f"\U0001f5d1  {t('remove.removing', app_id=app_id)}")
 
     uninstall_wrapper(app_id)
 
     if json_mode:
         output({"removed": app_id}, json_mode=True)
     else:
-        success(f"已卸载 clam-{app_id}")
+        success(t("remove.success", app_id=app_id))
+
+
+@cli.command()
+@click.argument("language", required=False, type=click.Choice(["en", "zh"]))
+def lang(language):
+    """Set display language / \u8bbe\u7f6e\u663e\u793a\u8bed\u8a00"""
+    if language is None:
+        click.echo(t("lang.current", lang=get_lang()))
+        return
+    save_lang(language)
+    set_lang(language)
+    # Re-init to use new language for this message
+    click.echo(t("lang.switched", lang=language))

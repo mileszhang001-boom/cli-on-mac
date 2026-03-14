@@ -1,4 +1,4 @@
-"""统一输出模块 — 人类友好的 Rich 格式 + AI 友好的 JSON 格式。"""
+"""Unified output — human-friendly Rich format + AI-friendly JSON format."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import json
 import sys
 
 from rich.console import Console
+
+from clam.i18n import t
 
 console = Console()
 err_console = Console(stderr=True)
@@ -31,7 +33,7 @@ def output(data, json_mode: bool) -> None:
             console.print(f"  [bold]{str(k).ljust(max_key)}[/bold]  {v}")
     elif isinstance(data, list):
         if not data:
-            console.print("[dim](无)[/dim]")
+            console.print(f"[dim]{t('output.none')}[/dim]")
             return
         if isinstance(data[0], dict):
             _print_table(data)
@@ -44,7 +46,7 @@ def output(data, json_mode: bool) -> None:
 
 def error(msg: str) -> None:
     """输出错误信息到 stderr。"""
-    err_console.print(f"[bold red]错误:[/bold red] {msg}")
+    err_console.print(f"[bold red]{t('output.error')}[/bold red] {msg}")
 
 
 def success(msg: str) -> None:

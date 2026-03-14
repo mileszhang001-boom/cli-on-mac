@@ -10,6 +10,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from clam.generator.specifier_defaults import get_specifier_default
+from clam.i18n import get_template_i18n, t
 from clam.scanner.menu_scanner import MenuGroup, MenuItem, MenuScanResult
 from clam.scanner.sdef_parser import SdefCommand, SdefEnumeration, SdefInfo, SdefProperty
 
@@ -334,7 +335,16 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
 
     module_name = f"cli_{app_id.replace('-', '_')}"
 
-    # 渲染 CLI 模块
+    # Build i18n context with pre-formatted strings
+    i18n = get_template_i18n()
+    i18n["summary_full"] = t("tpl.summary_full", app_id=app_id, app_name=sdef_info.app_name)
+    if nested_groups:
+        i18n["get_all_info"] = t("tpl.get_all_info", name=nested_groups[0].as_name)
+    else:
+        i18n["get_all_info"] = ""
+    i18n["activated_msg"] = t("tpl.activated_msg", app_name=sdef_info.app_name)
+    i18n["quit_msg"] = t("tpl.quit_msg", app_name=sdef_info.app_name)
+
     cli_template = env.get_template("applescript_cli.py.j2")
     cli_code = cli_template.render(
         app_name=sdef_info.app_name,
@@ -343,6 +353,7 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
         app_properties=app_properties,
         nested_groups=nested_groups,
         max_compound_props=MAX_COMPOUND_PROPS,
+        i18n=i18n,
     )
     cli_path = output_dir / f"{module_name}.py"
     cli_path.write_text(cli_code, encoding="utf-8")
@@ -376,9 +387,15 @@ def generate_basic_wrapper(app_name: str, output_dir: Path) -> Path:
         keep_trailing_newline=True,
     )
 
-    # 渲染基础 CLI 模块
+    # Build i18n context
+    i18n = get_template_i18n()
+    i18n["summary_basic"] = t("tpl.summary_basic", app_id=app_id, app_name=app_name)
+    i18n["activated_msg"] = t("tpl.activated_msg", app_name=app_name)
+    i18n["quit_msg"] = t("tpl.quit_msg", app_name=app_name)
+    i18n["opened_msg"] = t("tpl.opened_msg", app_name=app_name, filepath="{filepath}")
+
     cli_template = env.get_template("basic_cli.py.j2")
-    cli_code = cli_template.render(app_name=app_name, app_id=app_id)
+    cli_code = cli_template.render(app_name=app_name, app_id=app_id, i18n=i18n)
     cli_path = output_dir / f"{module_name}.py"
     cli_path.write_text(cli_code, encoding="utf-8")
 
@@ -569,6 +586,13 @@ def generate_ui_wrapper(
         keep_trailing_newline=True,
     )
 
+    # Build i18n context
+    i18n = get_template_i18n()
+    i18n["summary_ui"] = t("tpl.summary_ui", app_id=app_id, app_name=app_name)
+    i18n["activated_msg"] = t("tpl.activated_msg", app_name=app_name)
+    i18n["quit_msg"] = t("tpl.quit_msg", app_name=app_name)
+    i18n["opened_msg"] = t("tpl.opened_msg", app_name=app_name, filepath="{filepath}")
+
     cli_template = env.get_template("ui_scripting_cli.py.j2")
     cli_code = cli_template.render(
         app_name=app_name,
@@ -577,6 +601,7 @@ def generate_ui_wrapper(
         menu_groups=menu_groups,
         first_menu_cmd=first_menu_cmd,
         first_menu_desc=first_menu_desc,
+        i18n=i18n,
     )
     cli_path = output_dir / f"{module_name}.py"
     cli_path.write_text(cli_code, encoding="utf-8")

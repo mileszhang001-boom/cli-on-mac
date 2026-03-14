@@ -83,24 +83,24 @@ def _output(ctx: click.Context, data: str) -> None:
 
 
 def _print_summary() -> None:
-    click.echo("clam-{{ app_id }} — {{ app_name }} 的命令行控制工具（UI Scripting 模式）\n")
-    click.echo("核心能力:")
+    click.echo("{{ i18n.summary_ui }}\n")
+    click.echo("{{ i18n.capabilities }}")
 {% for group in menu_groups %}
-    click.echo("  🎛  {{ group.name }}    {{ group.items | length }} 个操作：{{ group.items | map(attribute='name') | join('、') }}")
+    click.echo("  🎛  {{ group.name }}    {{ group.items | length }} {{ i18n.unit_ops }}{{ i18n.colon_sep }}{{ group.items | map(attribute='name') | join(i18n.join_sep) }}")
 {% endfor %}
-    click.echo("  ⚡ 基础控制    前置窗口、退出应用、打开文件")
-    click.echo("  📊 基本信息    应用名称、版本号、窗口状态")
+    click.echo("  ⚡ {{ i18n.basic_controls_ui }}")
+    click.echo("  📊 {{ i18n.basic_info_ui }}")
     click.echo("")
-    click.echo("  ⚠️  该应用未提供脚本化接口，通过菜单点击实现控制。")
-    click.echo("  ⚠️  需要辅助功能权限（System Settings > Accessibility）。")
+    click.echo("  ⚠️  {{ i18n.no_sdef_ui }}")
+    click.echo("  ⚠️  {{ i18n.accessibility_warning }}")
     click.echo("")
-    click.echo("快速上手:")
+    click.echo("{{ i18n.quickstart }}")
 {% if first_menu_cmd %}
     click.echo("  $ clam-{{ app_id }} {{ first_menu_cmd }}{{ ' ' * (20 - first_menu_cmd | length) }}{{ first_menu_desc }}")
 {% endif %}
-    click.echo("  $ clam-{{ app_id }} activate            前置窗口")
+    click.echo("  $ clam-{{ app_id }} activate            {{ i18n.activate_doc }}")
     click.echo("")
-    click.echo("查看完整 API:")
+    click.echo("{{ i18n.view_api_basic }}")
     click.echo("  $ clam-{{ app_id }} api")
 
 
@@ -126,7 +126,7 @@ def cli(ctx: click.Context, use_json: bool) -> None:
 
 @cli.command(name="api")
 def api_cmd() -> None:
-    """查看完整 API 列表"""
+    """{{ i18n.api_docstring_basic }}"""
 {% for group in menu_groups %}
     click.echo("{{ group.name }}:")
 {% for item in group.items %}
@@ -138,15 +138,15 @@ def api_cmd() -> None:
 {% endfor %}
     click.echo("")
 {% endfor %}
-    click.echo("基础控制:")
-    click.echo("  activate                        前置窗口")
-    click.echo("  quit-app                        退出应用")
-    click.echo("  open-file <路径>                用该应用打开文件")
+    click.echo("{{ i18n.basic_controls_label }}")
+    click.echo("  activate                        {{ i18n.activate_api }}")
+    click.echo("  quit-app                        {{ i18n.quit_api }}")
+    click.echo("  open-file {{ i18n.path_arg }}                {{ i18n.open_api }}")
     click.echo("")
-    click.echo("基本信息:")
-    click.echo("  get-name                        应用名称")
-    click.echo("  get-version                     版本号")
-    click.echo("  get-frontmost                   是否为当前活跃窗口")
+    click.echo("{{ i18n.basic_info_label }}")
+    click.echo("  get-name                        {{ i18n.name_api }}")
+    click.echo("  get-version                     {{ i18n.version_api }}")
+    click.echo("  get-frontmost                   {{ i18n.frontmost_api }}")
 
 
 # ── Menu-driven commands ────────────────────────────────────────────────────
@@ -173,34 +173,34 @@ def {{ item.func_name }}(ctx: click.Context) -> None:
 @cli.command(name="activate")
 @click.pass_context
 def activate_cmd(ctx: click.Context) -> None:
-    """前置窗口"""
+    """{{ i18n.activate_doc }}"""
     _run_applescript('tell application "{{ app_name }}" to activate')
-    click.echo("{{ app_name }} 已前置")
+    click.echo("{{ i18n.activated_msg }}")
 
 
 @cli.command(name="quit-app")
 @click.pass_context
 def quit_cmd(ctx: click.Context) -> None:
-    """退出应用"""
+    """{{ i18n.quit_doc }}"""
     _run_applescript('tell application "{{ app_name }}" to quit')
-    click.echo("{{ app_name }} 已退出")
+    click.echo("{{ i18n.quit_msg }}")
 
 
 @cli.command(name="open-file")
 @click.argument("filepath")
 @click.pass_context
 def open_file_cmd(ctx: click.Context, filepath: str) -> None:
-    """用该应用打开文件"""
+    """{{ i18n.open_doc }}"""
     escaped = filepath.replace('\\', '\\\\').replace('"', '\\"')
     script = f'tell application "{{ app_name }}" to open POSIX file "{escaped}"'
     _run_applescript(script)
-    click.echo(f"已用 {{ app_name }} 打开 {filepath}")
+    click.echo(f"{{ i18n.opened_msg }}")
 
 
 @cli.command(name="get-name")
 @click.pass_context
 def get_name_cmd(ctx: click.Context) -> None:
-    """获取应用名称"""
+    """{{ i18n.get_name_doc }}"""
     result = _run_applescript('tell application "{{ app_name }}" to get name')
     _output(ctx, result)
 
@@ -208,7 +208,7 @@ def get_name_cmd(ctx: click.Context) -> None:
 @cli.command(name="get-version")
 @click.pass_context
 def get_version_cmd(ctx: click.Context) -> None:
-    """获取版本号"""
+    """{{ i18n.get_version_doc }}"""
     result = _run_applescript('tell application "{{ app_name }}" to get version')
     _output(ctx, result)
 
@@ -216,7 +216,7 @@ def get_version_cmd(ctx: click.Context) -> None:
 @cli.command(name="get-frontmost")
 @click.pass_context
 def get_frontmost_cmd(ctx: click.Context) -> None:
-    """是否为当前活跃窗口"""
+    """{{ i18n.get_frontmost_doc }}"""
     result = _run_applescript('tell application "{{ app_name }}" to get frontmost')
     _output(ctx, result)
 
