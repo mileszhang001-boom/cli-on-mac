@@ -1,10 +1,5 @@
 <h1 align="center"><img src="assets/logo.png" alt="" width="64" style="vertical-align: middle;">&nbsp; CLAM — CLI on Mac</h1>
 
-<p align="center">
-  <a href="https://pypi.org/project/clam-mac/"><img src="https://img.shields.io/pypi/v/clam-mac?color=blue" alt="PyPI"></a>
-  <a href="https://pypi.org/project/clam-mac/"><img src="https://img.shields.io/pypi/pyversions/clam-mac" alt="Python"></a>
-  <a href="https://github.com/mileszhang001-boom/cli-on-mac/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/clam-mac" alt="License"></a>
-</p>
 
 <p align="center">
   <a href="docs/README-zh.md">中文</a> | English
