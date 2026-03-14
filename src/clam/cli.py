@@ -255,15 +255,16 @@ def scan(ctx):
                 label = _label(r)
                 padded = _pad_to(label, col_width)
                 mark = "  [green]✓[/green]" if r["installed"] else ""
+                app_id_hint = f"[dim cyan]{r['app_id']}[/dim cyan]"
                 console.print(
-                    f"  {idx:2d}.  {padded}[dim]|[/dim]  {desc}{mark}"
+                    f"  {idx:2d}.  {padded}[dim]|[/dim]  {desc}  {app_id_hint}{mark}"
                 )
                 idx += 1
             console.print()
 
         console.print(
-            "[dim]💡 安装: clam install <名称>  |  "
-            "详情: clam info <名称>[/dim]"
+            "[dim]💡 试一试: clam install music  |  "
+            "详情: clam info music[/dim]"
         )
 
 
