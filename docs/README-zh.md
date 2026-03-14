@@ -7,6 +7,10 @@
 </p>
 
 <p align="center">
+  中文 | <a href="../README.md">English</a>
+</p>
+
+<p align="center">
   <strong>你的 Mac 上有几十个应用，但 AI 一个都碰不到。<br>
   CLAM 自动扫描、生成 CLI 接口，让任何 AI Agent 用原生方式操控一切。</strong>
 </p>

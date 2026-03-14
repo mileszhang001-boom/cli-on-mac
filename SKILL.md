@@ -10,7 +10,7 @@ metadata:
         - pip
       os:
         - macos
-    emoji: "🦀"
+    emoji: "\U0001F980"
     homepage: https://github.com/mileszhang001-boom/cli-on-mac
     tags:
       - macos
