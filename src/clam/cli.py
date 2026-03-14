@@ -59,6 +59,8 @@ _APP_DESCRIPTIONS: dict[str, tuple[str, str, str]] = {
     "quicktime-player":   ("🎬", "媒体", "视频播放、录屏、录音、导出裁剪"),
     "garageband":         ("🎸", "媒体", "音乐制作预览"),
     "photos":             ("📷", "媒体", "照片导入导出、相册管理、幻灯片放映"),
+    "spotify":            ("🎵", "媒体", "播放控制、切歌、播放列表、音量调节"),
+    "qqmusic":            ("🎵", "媒体", "播放控制、切歌、歌单管理"),
     # 浏览器
     "google-chrome":      ("🌐", "浏览器", "打开网页、管理标签页、页面导航"),
     "safari":             ("🌐", "浏览器", "打开网页、管理标签页、书签、阅读列表"),
@@ -72,6 +74,8 @@ _APP_DESCRIPTIONS: dict[str, tuple[str, str, str]] = {
     "keynote":            ("📊", "办公", "幻灯片制作、导出、演示控制"),
     "pages":              ("📝", "办公", "文档编辑、排版、表格、导出"),
     "numbers":            ("📊", "办公", "电子表格、行列操作、排序、导出"),
+    "notion":             ("📝", "办公", "文档编辑、知识库、项目管理"),
+    "obsidian":           ("📝", "办公", "笔记编辑、双向链接、知识图谱"),
     # 效率
     "mail":               ("📧", "效率", "发送邮件、搜索、管理邮箱"),
     "calendar":           ("📅", "效率", "创建/查询日程、视图切换"),
@@ -80,20 +84,46 @@ _APP_DESCRIPTIONS: dict[str, tuple[str, str, str]] = {
     "notes":              ("📝", "效率", "创建/搜索/编辑备忘录"),
     "reminders":          ("✅", "效率", "查看提醒事项、待办管理"),
     "ticktick":           ("✅", "效率", "任务查询、添加待办、番茄钟"),
+    # 通信
+    "telegram":           ("💬", "通信", "消息收发、群组管理"),
+    "wechat":             ("💬", "通信", "消息收发、文件传输"),
+    "qq":                 ("💬", "通信", "消息收发、文件传输"),
+    "dingtalk":           ("💬", "通信", "消息收发、审批、考勤"),
+    "lark":               ("💬", "通信", "消息收发、文档协作、日程"),
+    "discord":            ("💬", "通信", "消息收发、语音频道"),
+    "slack":              ("💬", "通信", "消息收发、频道管理、集成"),
+    "zoom":               ("📹", "通信", "视频会议、屏幕共享"),
     # 设计
     "figma":              ("🎨", "设计", "对象操作、文本排版、矢量编辑、图层管理"),
-    # 开发/系统/工具
-    "finder":             ("📂", "系统", "文件管理、窗口视图、前往目录、标签"),
+    # 开发
     "xcode":              ("🔨", "开发", "项目构建、运行、测试、调试"),
+    "visual-studio-code": ("💻", "开发", "代码编辑、终端、扩展、调试"),
+    "cursor":             ("💻", "开发", "AI 代码编辑、终端、调试"),
+    # 系统
+    "finder":             ("📂", "系统", "文件管理、窗口视图、前往目录、标签"),
     "terminal":           ("💻", "系统", "执行脚本、窗口设置"),
     "system-settings":    ("🔧", "系统", "系统设置查看与修改"),
     "shortcuts":          ("🔗", "系统", "运行快捷指令"),
+    # 工具
     "amphetamine":        ("🔋", "工具", "防休眠控制、会话管理"),
     "flow":               ("🕐", "工具", "专注计时、番茄钟、阶段控制"),
     "the-unarchiver":     ("📦", "工具", "文件解压"),
     "bluetooth-file-exchange": ("📡", "工具", "蓝牙文件收发"),
     "screen-sharing":     ("🖥️", "工具", "远程屏幕共享"),
     "console":            ("🔍", "工具", "系统日志查看"),
+    "clashx-pro":         ("🌐", "工具", "网络代理、规则切换"),
+    "chatgpt-atlas":      ("🤖", "工具", "AI 对话"),
+}
+
+# macOS 内部组件，对用户无意义，从 scan 结果中隐藏
+_HIDDEN_APPS: set[str] = {
+    "applescript-utility",
+    "folder-actions-dispatcher",
+    "folderactionsdispatcher",
+    "image-events",
+    "shortcuts-events",
+    "system-events",
+    "voiceover",
 }
 
 
@@ -148,6 +178,8 @@ def scan(ctx):
     # 解析每个应用获取命令/属性数量
     results = []
     for app in apps:
+        if app.app_id in _HIDDEN_APPS:
+            continue
         if app.sdef_path:
             # 完整模式：解析 sdef
             try:
@@ -203,7 +235,7 @@ def scan(ctx):
             cat = entry[1] if entry else "其他"
             grouped[cat].append(r)
 
-        cat_order = ["办公", "设计", "媒体", "浏览器", "效率", "开发", "系统", "工具", "其他"]
+        cat_order = ["办公", "设计", "媒体", "浏览器", "通信", "效率", "开发", "系统", "工具", "其他"]
         sorted_cats = sorted(grouped.keys(), key=lambda c: cat_order.index(c) if c in cat_order else 99)
 
         # 计算最长「emoji+名称」的显示宽度以对齐竖线
