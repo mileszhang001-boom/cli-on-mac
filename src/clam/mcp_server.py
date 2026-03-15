@@ -27,7 +27,7 @@ from clam.generator.applescript_gen import (
     get_ui_wrapper_info,
     get_wrapper_info,
 )
-from clam.generator.installer import install_wrapper, _entry_point_path
+from clam.generator.installer import install_wrapper
 from clam.registry import registry
 from clam.registry.registry import GENERATOR_VERSION
 from clam.scanner.app_scanner import find_app, find_basic_app, scan_applications

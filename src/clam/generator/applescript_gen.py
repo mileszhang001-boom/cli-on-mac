@@ -14,7 +14,6 @@ from clam.i18n import get_template_i18n, t
 from clam.scanner.menu_scanner import MenuItem, MenuScanResult
 from clam.scanner.sdef_parser import (
     SdefCommand,
-    SdefElement,
     SdefEnumeration,
     SdefInfo,
     SdefProperty,
@@ -668,7 +667,6 @@ def _to_ascii_slug(text: str) -> str:
     Falls back to stripping non-ASCII characters.
     """
     import re
-    import unicodedata
 
     # Common Chinese menu item mappings (covers most app menus)
     _ZH_MAP = {

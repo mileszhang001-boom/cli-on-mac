@@ -125,7 +125,6 @@ class TestExpandedDetection:
 
     def test_nested_sdef_detection(self, scanned_apps):
         """Apps with nested sdef files should be found."""
-        ids = {a.app_id for a in scanned_apps}
         # If ChatGPT Atlas is installed, it should be detected via nested sdef
         # This is machine-dependent, so just verify the scan didn't break
         assert len(scanned_apps) >= 42  # at least as many as before

@@ -2,7 +2,6 @@
 
 import os
 
-import pytest
 
 from clam.i18n import get_lang, init_lang, set_lang, t
 from clam.strings import en, zh

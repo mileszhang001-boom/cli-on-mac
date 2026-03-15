@@ -6,7 +6,7 @@ import sys
 
 import click
 
-from clam.i18n import get_lang, init_lang, save_lang, set_lang, t
+from clam.i18n import get_lang, save_lang, set_lang, t
 from clam.output import console, error, output, status, success
 from clam.registry import registry
 from clam.scanner.app_scanner import find_app, find_basic_app, scan_applications, suggest_app
