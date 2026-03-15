@@ -10,6 +10,13 @@
   Auto-discover apps. Generate CLI wrappers. Return structured JSON.
 </p>
 
+<p align="center">
+  <a href="https://pypi.org/project/clam-mac/"><img src="https://img.shields.io/pypi/v/clam-mac" alt="PyPI"></a>
+  <img src="https://img.shields.io/badge/platform-macOS-lightgrey" alt="macOS">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT">
+</p>
+
 <br>
 
 Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that — it scans installed apps, generates typed CLI wrappers on the fly, and gives every command structured JSON output. No APIs, no manual adapters, no AppleScript headaches.
@@ -32,16 +39,53 @@ pip install clam-mac
 ## Quick Start
 
 ```bash
-clam scan                       # discover controllable apps
-clam install music              # generate CLI wrapper (~10s)
-clam-music play                 # play music
-clam-music --json get-current-track   # → structured JSON
-clam-music set-sound-volume 50  # set volume
+clam scan                              # discover controllable apps
+clam install music                     # generate CLI wrapper (~10s)
+clam-music play                        # play music
+clam-music --json get-current-track    # → structured JSON
+clam-music set-sound-volume 50         # set volume
+clam-mail list-inbox-messages --unread # list unread emails
 ```
 
 Fuzzy matching built in: `chrome` → `google-chrome`, `word` → `microsoft-word`.
 
 ## Use with AI Agents
+
+### Claude Code (MCP)
+
+**Recommended setup** — install into a dedicated venv, then point Claude at the binary:
+
+```bash
+python3 -m venv ~/clam-env
+source ~/clam-env/bin/activate
+pip install clam-mac
+claude mcp add clam -- ~/clam-env/bin/clam-mcp
+```
+
+Or, if `clam-mcp` is already on your PATH (venv activated):
+
+```bash
+claude mcp add clam -- clam-mcp
+```
+
+Restart Claude Code, then just ask:
+
+> "Set volume to 50 and tell me what song is playing"
+> "List my unread emails"
+> "Open the Downloads folder in Finder"
+
+Claude will automatically call `clam_find_app` → `clam_install` → `clam_execute` — no manual setup per app.
+
+**Available MCP tools:**
+
+| Tool | Description |
+|------|-------------|
+| `clam_find_app(query)` | Instant app lookup — always start here |
+| `clam_install(app_id)` | Generate + install CLI wrapper (~10s) |
+| `clam_info(app_id)` | List all available commands and properties |
+| `clam_execute(app_id, command, args?)` | Run a command, returns JSON |
+| `clam_scan()` | Full scan of all controllable apps |
+| `clam_doctor(app_id)` | Check command reliability |
 
 ### OpenClaw
 
@@ -51,27 +95,7 @@ Install from [ClawHub](https://clawhub.ai):
 clawhub install clam-mac
 ```
 
-Or add to your Lobster pipeline:
-
-```yaml
-steps:
-  - run: clam-music set-sound-volume 20
-  - run: clam-music play
-  - run: clam-finder open ~/Projects/current
-```
-
-Once installed, the AI auto-discovers apps via `clam scan`, installs wrappers, and executes commands.
-
-### Claude Code (MCP)
-
-```bash
-pip install clam-mac
-claude mcp add clam -- clam-mcp
-```
-
-Then just ask:
-
-> "Set volume to 50 and tell me what song is playing"
+Once installed, the AI auto-discovers apps via `clam_find_app`, installs wrappers, and executes commands.
 
 ### Any Other Agent
 
@@ -79,7 +103,10 @@ CLAM generates standard CLI tools. Anything that can call shell commands works:
 
 ```python
 import subprocess, json
-result = subprocess.run(["clam-music", "--json", "get-current-track"], capture_output=True, text=True)
+result = subprocess.run(
+    ["clam-music", "--json", "get-current-track"],
+    capture_output=True, text=True
+)
 track = json.loads(result.stdout)
 ```
 
@@ -89,7 +116,7 @@ CLAM auto-selects the best automation mode for each app:
 
 | Mode | Mechanism | Apps | Commands |
 |------|-----------|------|----------|
-| **Full** | `.sdef` scripting definitions | Music, Finder, Chrome, Safari, Word | Dozens to hundreds |
+| **Full** | `.sdef` scripting definitions | Music, Finder, Mail, Chrome, Safari, Word | Dozens to hundreds |
 | **UI Scripting** | Menu clicks via Accessibility | Figma, Slack, VS Code, Spotify | All menu items |
 | **Basic** | macOS standard suite | DingTalk, WeChat, WPS | Activate, quit, open, version |
 
@@ -106,14 +133,22 @@ clam list              # list installed wrappers
 clam remove <app>      # uninstall wrapper
 ```
 
+## What's New in v0.2.0
+
+- **Collection queries** — apps with scripting definitions now support `list-<container>-<items>` commands (e.g. `clam-mail list-inbox-messages --unread`)
+- **Chinese app support** — QQ Music, WeChat, and other apps with non-ASCII names now install correctly
+- **MCP PATH fix** — `clam_execute` reliably finds wrapper binaries regardless of PATH in the MCP server context
+- **Better `clam_info`** — shows commands for basic-mode apps and list commands for sdef apps
+
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `clam-xxx` not found | `source .venv/bin/activate` or check your `PATH` |
+| `clam-xxx` not found | `source ~/clam-env/bin/activate` or check your `PATH` |
 | Permission denied | System Settings > Privacy & Security > Automation |
 | UI Scripting error | System Settings > Privacy & Security > Accessibility |
 | Only basic commands | App has no scripting support — basic mode is the max |
+| MCP tool not found | Restart Claude Code after `claude mcp add` |
 
 ## License
 
