@@ -34,6 +34,13 @@ dependencies = [
 ]
 readme = "README.md"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-timeout>=2.0",
+    "ruff>=0.1",
+]
+
 [project.urls]
 Homepage = "https://github.com/mileszhang001-boom/cli-on-mac"
 Repository = "https://github.com/mileszhang001-boom/cli-on-mac"
