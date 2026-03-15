@@ -27,14 +27,14 @@
 <tr>
 <td align="center" width="50%">
 <a href="https://youtu.be/LBmZHGgEl9I">
-<img src="../assets/demo-getting-started.jpg" alt="CLAM 上手演示" width="100%">
+<img src="../assets/demo-getting-started-zh.png" alt="CLAM 上手演示" width="100%">
 </a>
 <br><strong>🚀 三条命令，10 秒上手</strong><br>
 <code>pip install</code> → <code>clam scan</code> → <code>clam install</code>，任何 Mac 应用立刻变成 AI 可调用的 CLI 工具。
 </td>
 <td align="center" width="50%">
 <a href="https://youtu.be/G1IOv1YUPQU">
-<img src="../assets/demo-email.jpg" alt="AI 读取邮件演示" width="100%">
+<img src="../assets/demo-email-zh.png" alt="AI 读取邮件演示" width="100%">
 </a>
 <br><strong>📧 AI 直接读邮件，无需 API Key</strong><br>
 问"我有哪些未读邮件？"—— AI 实时读取 Apple Mail。无 OAuth，无 Gmail API，零折腾。
@@ -43,14 +43,14 @@
 <tr>
 <td align="center" width="50%">
 <a href="https://youtu.be/3WD85V0U4eo">
-<img src="../assets/demo-calendar.jpg" alt="AI 生成每日简报演示" width="100%">
+<img src="../assets/demo-calendar-zh.png" alt="AI 生成每日简报演示" width="100%">
 </a>
 <br><strong>📅 一句话生成今日待办</strong><br>
 "今天有什么安排？"—— AI 读取日历和备忘录，直接给你每日清单。零复制粘贴。
 </td>
 <td align="center" width="50%">
 <a href="https://youtu.be/P95UukSavsI">
-<img src="../assets/demo-spotify.jpg" alt="AI 控制 Spotify 演示" width="100%">
+<img src="../assets/demo-spotify-zh.png" alt="AI 控制 Spotify 演示" width="100%">
 </a>
 <br><strong>🎵 用 AI 对话控制 Spotify</strong><br>
 说"我想听稻香"—— 就这么简单。AI 控制播放、暂停、切歌，零配置。
