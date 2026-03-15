@@ -9,6 +9,10 @@ from pathlib import Path
 REGISTRY_DIR = Path.home() / ".clam"
 REGISTRY_FILE = REGISTRY_DIR / "registry.json"
 
+# Bump whenever the generated CLI format changes significantly.
+# clam_info and clam_execute use this to detect stale wrappers.
+GENERATOR_VERSION = 2
+
 
 def _ensure_dir() -> None:
     REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,6 +52,7 @@ def register(
         "installed_at": datetime.now(timezone.utc).isoformat(),
         "command_count": command_count,
         "property_count": property_count,
+        "generator_version": GENERATOR_VERSION,
     }
     save(data)
 

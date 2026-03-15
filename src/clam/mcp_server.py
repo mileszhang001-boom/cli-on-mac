@@ -29,6 +29,7 @@ from clam.generator.applescript_gen import (
 )
 from clam.generator.installer import install_wrapper, _entry_point_path
 from clam.registry import registry
+from clam.registry.registry import GENERATOR_VERSION
 from clam.scanner.app_scanner import find_app, find_basic_app, scan_applications
 from clam.scanner.menu_scanner import scan_menus
 from clam.scanner.sdef_parser import parse_sdef
@@ -280,7 +281,26 @@ def clam_info(app_id: str) -> str:
     from clam.generator.applescript_gen import _build_list_commands
     list_cmds = _build_list_commands(sdef_info)
 
-    return json.dumps({
+    # Check if installed wrapper is up-to-date
+    installed = registry.get(app.app_id)
+    needs_update = installed and installed.get("generator_version", 0) < GENERATOR_VERSION
+
+    def _list_cmd_name(lc) -> str:
+        if lc.is_element_of_element:
+            return f"list-{lc.element_plural.replace(' ', '-')}"
+        if lc.prop_name:
+            return f"list-{lc.prop_cli_name}-{lc.element_plural.replace(' ', '-')}"
+        return f"list-{lc.prop_cli_name}"
+
+    def _list_cmd_params(lc) -> list:
+        params = []
+        if lc.is_element_of_element:
+            params.append({"name": f"--{lc.parent_cli_name}", "description": f"Filter by {lc.parent_type} name (optional)"})
+        if lc.filter_label:
+            params.append({"name": f"--{lc.filter_label}", "description": f"Only show {lc.filter_label} {lc.element_plural}."})
+        return params
+
+    result = {
         "app_id": app.app_id,
         "app_name": app.name,
         "entry_point": f"clam-{app.app_id}",
@@ -296,18 +316,19 @@ def clam_info(app_id: str) -> str:
                 ],
             }
             for cmd in wi["commands"]
-        ] + [
+        ] + ([
             {
-                "name": f"list-{lc.prop_cli_name}-{lc.element_plural.replace(' ', '-')}",
-                "description": f"List {lc.element_plural} in {lc.prop_name}.",
-                "supported": True,
-                "params": (
-                    [{"name": f"--{lc.filter_label}", "description": f"Only show {lc.filter_label} {lc.element_plural}."}]
-                    if lc.filter_label else []
+                "name": _list_cmd_name(lc),
+                "description": (
+                    f"List {lc.element_plural} (use --{lc.parent_cli_name} to filter by {lc.parent_type})"
+                    if lc.is_element_of_element
+                    else f"List {lc.element_plural}" + (f" in {lc.prop_name}" if lc.prop_name else "")
                 ),
+                "supported": True,
+                "params": _list_cmd_params(lc),
             }
             for lc in list_cmds
-        ],
+        ] if not needs_update else []),
         "properties": [
             {
                 "name": prop.cli_name,
@@ -337,7 +358,14 @@ def clam_info(app_id: str) -> str:
             }
             for group in wi["nested_groups"]
         ],
-    }, ensure_ascii=False, indent=2)
+    }
+    if needs_update:
+        result["warning"] = (
+            f"Wrapper was installed with an older generator (v{installed.get('generator_version', 0)}, "
+            f"current v{GENERATOR_VERSION}). Run clam_install('{app.app_id}') to regenerate "
+            f"and unlock list-* collection commands."
+        )
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 @mcp.tool()
@@ -444,6 +472,15 @@ def clam_execute(app_id: str, command: str, args: dict | None = None) -> str:
     wrapper = registry.get(app_id)
     if not wrapper:
         return json.dumps({"error": f"未安装 wrapper: {app_id}，请先调用 clam_install"})
+
+    # Check for stale wrapper: list-* commands require generator v2+
+    if command.startswith("list-") and wrapper.get("generator_version", 0) < GENERATOR_VERSION:
+        return json.dumps({
+            "error": (
+                f"命令 '{command}' 需要重新安装 wrapper（当前版本 v{wrapper.get('generator_version', 0)}，"
+                f"需要 v{GENERATOR_VERSION}）。请调用 clam_install('{app_id}') 后重试。"
+            )
+        })
 
     # Resolve full path: try registry name in venv bin first, then clam-{app_id}
     import sys as _sys
