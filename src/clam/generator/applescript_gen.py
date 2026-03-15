@@ -18,6 +18,7 @@ from clam.scanner.sdef_parser import (
     SdefEnumeration,
     SdefInfo,
     SdefProperty,
+    _to_cli_name,
     _to_func_name,
 )
 
@@ -80,7 +81,7 @@ class TemplateListKeyProp:
 
 @dataclass
 class TemplateListCommand:
-    prop_name: str          # app property AS name (e.g., "inbox")
+    prop_name: str          # app property AS name (e.g., "inbox") or "" for element-level
     prop_cli_name: str      # CLI name (e.g., "inbox")
     prop_func_name: str     # Python func name (e.g., "inbox")
     element_type: str       # element AS name (e.g., "message")
@@ -90,6 +91,10 @@ class TemplateListCommand:
     filter_prop: str | None    # filter property AS name (e.g., "read status") or None
     filter_label: str | None   # CLI flag name (e.g., "unread") or None
     filter_value: str | None   # AppleScript filter value (e.g., "false") or None
+    # Element-level list commands (e.g., "every event of calendar X")
+    is_element_of_element: bool = False   # True for nested element queries
+    parent_type: str = ""                 # parent AS name (e.g., "calendar")
+    parent_cli_name: str = ""             # CLI param name (e.g., "calendar")
 
 # Max properties per nested group compound command
 MAX_COMPOUND_PROPS = 25
@@ -335,8 +340,12 @@ def check_command_support(sdef_info: SdefInfo, app_id: str = "") -> list[dict]:
 
 
 _LIST_KEY_PROP_PRIORITY = [
-    "subject", "name", "title", "sender", "from", "author",
-    "date received", "date sent", "date", "read status", "flagged status",
+    "subject", "summary", "name", "title",
+    "sender", "from", "author",
+    "start date", "end date", "due date",
+    "date received", "date sent", "date",
+    "location", "completed", "priority", "flagged",
+    "read status", "flagged status",
     "size", "message size", "duration",
 ]
 
@@ -366,14 +375,14 @@ def _pick_list_key_props(
                 if len(chosen) >= max_props:
                     break
 
-    # Second pass: fill up with remaining text props if under max
+    # Second pass: fill up with remaining props if under max
     if len(chosen) < max_props:
         for prop in elem_props.values():
-            if prop.name not in seen and not prop.hidden and prop.type in ("text", "integer", "boolean"):
+            if prop.name not in seen and not prop.hidden and prop.type in ("text", "integer", "boolean", "date", "real"):
                 chosen.append(TemplateListKeyProp(
                     as_name=prop.name,
                     dict_key=prop.name.replace(" ", "_"),
-                    needs_cast=False,
+                    needs_cast=prop.type in _DATE_TYPES,
                 ))
                 seen.add(prop.name)
                 if len(chosen) >= max_props:
@@ -382,8 +391,15 @@ def _pick_list_key_props(
     return chosen
 
 
+def _pluralize(name: str) -> str:
+    """Naive English pluralization."""
+    if name.endswith("s"):
+        return name + "es"
+    return name + "s"
+
+
 def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
-    """Build list commands for app-level properties whose type has element children."""
+    """Build list commands from properties-with-elements AND app-level elements."""
     # elements_by_class: class_name -> [element_type]
     elements_by_class: dict[str, list[str]] = {}
     for elem in sdef_info.elements:
@@ -396,9 +412,9 @@ def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
 
     result = []
     app_props = props_by_class.get("application", {})
-
     seen_cmds: set[str] = set()
 
+    # ── Pattern 1: property → elements (e.g. Mail: inbox → messages) ──
     for prop_name, prop in app_props.items():
         if prop.hidden or prop.access == "wo":
             continue
@@ -407,12 +423,7 @@ def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
             continue
 
         for elem_type in elements_by_class[prop_type]:
-            # Naive pluralization
-            if elem_type.endswith("s"):
-                plural = elem_type + "es"
-            else:
-                plural = elem_type + "s"
-
+            plural = _pluralize(elem_type)
             cmd_name = f"list-{prop.cli_name}-{plural.replace(' ', '-')}"
             if cmd_name in seen_cmds:
                 continue
@@ -421,14 +432,11 @@ def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
             elem_props = props_by_class.get(elem_type, {})
             key_props = _pick_list_key_props(elem_type, elem_props)
 
-            # Detect filter (boolean status props like "read status")
-            filter_prop = None
-            filter_label = None
-            filter_value = None
+            filter_prop = filter_label = filter_value = None
             if "read status" in elem_props:
-                filter_prop = "read status"
-                filter_label = "unread"
-                filter_value = "false"
+                filter_prop, filter_label, filter_value = "read status", "unread", "false"
+            elif "completed" in elem_props:
+                filter_prop, filter_label, filter_value = "completed", "incomplete", "false"
 
             result.append(TemplateListCommand(
                 prop_name=prop_name,
@@ -441,6 +449,78 @@ def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
                 filter_prop=filter_prop,
                 filter_label=filter_label,
                 filter_value=filter_value,
+            ))
+
+    # ── Pattern 2: app-level elements (e.g. Calendar: application → calendar) ──
+    app_elements = elements_by_class.get("application", [])
+    app_element_set = set(app_elements)
+
+    # 2a: list top-level elements first (e.g. list-calendars, list-reminders)
+    for elem_type in app_elements:
+        plural = _pluralize(elem_type)
+        cli_name = _to_cli_name(plural)
+        func_name = _to_func_name(plural)
+
+        cmd_name = f"list-{cli_name}"
+        if cmd_name in seen_cmds:
+            continue
+        seen_cmds.add(cmd_name)
+
+        elem_props = props_by_class.get(elem_type, {})
+        key_props = _pick_list_key_props(elem_type, elem_props)
+
+        filter_prop = filter_label = filter_value = None
+        if "completed" in elem_props:
+            filter_prop, filter_label, filter_value = "completed", "incomplete", "false"
+
+        result.append(TemplateListCommand(
+            prop_name="",
+            prop_cli_name=cli_name,
+            prop_func_name=func_name,
+            element_type=elem_type,
+            element_plural=plural,
+            element_func=func_name,
+            key_props=key_props,
+            filter_prop=filter_prop,
+            filter_label=filter_label,
+            filter_value=filter_value,
+        ))
+
+    # 2b: list child elements with parent selector
+    # e.g. list-events --calendar "Work" → every event of calendar "Work"
+    # Skip if child is already a direct app element (already has simpler top-level cmd)
+    for elem_type in app_elements:
+        child_elements = elements_by_class.get(elem_type, [])
+        for child_type in child_elements:
+            if child_type in app_element_set:
+                continue  # already has top-level list command
+            child_plural = _pluralize(child_type)
+            child_cmd = f"list-{child_plural.replace(' ', '-')}"
+            if child_cmd in seen_cmds:
+                continue
+            seen_cmds.add(child_cmd)
+
+            child_props = props_by_class.get(child_type, {})
+            key_props = _pick_list_key_props(child_type, child_props)
+
+            filter_prop = filter_label = filter_value = None
+            if "completed" in child_props:
+                filter_prop, filter_label, filter_value = "completed", "incomplete", "false"
+
+            result.append(TemplateListCommand(
+                prop_name="",
+                prop_cli_name=_to_cli_name(child_plural),
+                prop_func_name=_to_func_name(child_plural),
+                element_type=child_type,
+                element_plural=child_plural,
+                element_func=_to_func_name(child_plural),
+                key_props=key_props,
+                filter_prop=filter_prop,
+                filter_label=filter_label,
+                filter_value=filter_value,
+                is_element_of_element=True,
+                parent_type=elem_type,
+                parent_cli_name=_to_cli_name(elem_type),
             ))
 
     return result

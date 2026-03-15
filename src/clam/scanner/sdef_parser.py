@@ -308,10 +308,15 @@ def parse_sdef(sdef_path: str, app_name: str, *, max_bytes: int = MAX_SDEF_BYTES
                     if elem_type:
                         info.elements.append(SdefElement(element_type=elem_type, class_name=class_name))
 
-        # Properties from <class-extension> elements
+        # Properties and elements from <class-extension> elements
         for ext in suite.findall("class-extension"):
             class_name = ext.get("extends", "")
             info.properties.extend(_parse_properties(ext, class_name))
+
+            for elem_tag in ext.findall("element"):
+                elem_type = elem_tag.get("type", "")
+                if elem_type:
+                    info.elements.append(SdefElement(element_type=elem_type, class_name=class_name))
 
     # Resolve inheritance so child classes include parent properties
     info.properties = _resolve_inheritance(info.properties, inheritance)
