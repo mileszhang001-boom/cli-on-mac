@@ -53,12 +53,19 @@ class SdefEnumeration:
 
 
 @dataclass
+class SdefElement:
+    element_type: str   # e.g., "message"
+    class_name: str     # e.g., "mailbox"
+
+
+@dataclass
 class SdefInfo:
     app_name: str
     sdef_path: str
     commands: list[SdefCommand] = field(default_factory=list)
     properties: list[SdefProperty] = field(default_factory=list)
     enumerations: list[SdefEnumeration] = field(default_factory=list)
+    elements: list[SdefElement] = field(default_factory=list)
 
 
 STANDARD_COMMAND_NAMES = frozenset({
@@ -294,6 +301,12 @@ def parse_sdef(sdef_path: str, app_name: str, *, max_bytes: int = MAX_SDEF_BYTES
             parent = cls.get("inherits")
             if parent:
                 inheritance[class_name] = parent
+
+            if not class_hidden:
+                for elem_tag in cls.findall("element"):
+                    elem_type = elem_tag.get("type", "")
+                    if elem_type:
+                        info.elements.append(SdefElement(element_type=elem_type, class_name=class_name))
 
         # Properties from <class-extension> elements
         for ext in suite.findall("class-extension"):

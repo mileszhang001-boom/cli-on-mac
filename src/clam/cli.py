@@ -20,34 +20,6 @@ from clam.scanner.menu_scanner import scan_menus
 from clam.generator.installer import install_wrapper, uninstall_wrapper
 
 
-def _display_width(s: str) -> int:
-    """Compute terminal display width of a string (handles CJK, emoji)."""
-    import unicodedata
-    w = 0
-    for ch in s:
-        cp = ord(ch)
-        if ch == "\ufe0f":
-            continue
-        eaw = unicodedata.east_asian_width(ch)
-        if eaw in ("W", "F"):
-            w += 2
-        elif 0x1F000 <= cp <= 0x1FFFF:
-            w += 2
-        elif 0x2600 <= cp <= 0x27BF:
-            w += 2
-        elif 0x2300 <= cp <= 0x23FF:
-            w += 2
-        else:
-            w += 1
-    return w
-
-
-def _pad_to(s: str, target: int) -> str:
-    """Pad string with spaces to reach target display width."""
-    current = _display_width(s)
-    return s + " " * max(0, target - current)
-
-
 # ── App descriptions ────────────────────────────────────────────────────────
 # app_id → (emoji, category_key, description_key)
 _APP_DESCRIPTIONS: dict[str, tuple[str, str, str]] = {
@@ -184,7 +156,7 @@ def scan(ctx):
         if app.sdef_path:
             try:
                 sdef_info = parse_sdef(app.sdef_path, app.name)
-                wrapper_info = get_wrapper_info(sdef_info)
+                wrapper_info = get_wrapper_info(sdef_info, app.app_id)
                 results.append({
                     "name": app.name,
                     "app_id": app.app_id,
@@ -237,17 +209,10 @@ def scan(ctx):
             key=lambda c: _CAT_ORDER.index(c) if c in _CAT_ORDER else 99,
         )
 
-        def _plain_label(r):
-            entry = _APP_DESCRIPTIONS.get(r["app_id"])
-            emoji = entry[0] if entry else "\U0001f4ce"
-            return f"{emoji} {r['name']} ({r['app_id']})"
-
         def _rich_label(r):
             entry = _APP_DESCRIPTIONS.get(r["app_id"])
             emoji = entry[0] if entry else "\U0001f4ce"
             return f"{emoji} {r['name']} [dim]({r['app_id']})[/dim]"
-
-        col_width = max(_display_width(_plain_label(r)) for r in results) + 2
 
         idx = 1
         for cat_key in sorted_cats:
@@ -255,12 +220,10 @@ def scan(ctx):
             for r in grouped[cat_key]:
                 entry = _APP_DESCRIPTIONS.get(r["app_id"])
                 desc = t(entry[2]) if entry else _auto_describe(r["cmd_names"])
-                plain = _plain_label(r)
-                padding = " " * max(0, col_width - _display_width(plain))
                 rich = _rich_label(r)
-                mark = "  [green]\u2713[/green]" if r["installed"] else ""
+                mark = " [green]\u2713[/green]" if r["installed"] else ""
                 console.print(
-                    f"  {idx:2d}.  {rich}{padding}[dim]|[/dim]  {desc}{mark}"
+                    f"  {idx:2d}.  {rich}  [dim]\u2014[/dim] {desc}{mark}"
                 )
                 idx += 1
             console.print()
@@ -312,7 +275,7 @@ def install(ctx, app_name):
 
     if mode == "basic":
         try:
-            generate_basic_wrapper(app.name, wrapper_dir)
+            generate_basic_wrapper(app.name, wrapper_dir, app_id=app.app_id)
         except Exception as e:
             error(t("install.gen_failed", error=e))
             sys.exit(1)
@@ -320,7 +283,7 @@ def install(ctx, app_name):
         prop_count = 3
     elif mode == "ui":
         try:
-            generate_ui_wrapper(app.name, menu_scan.process_name, menu_scan, wrapper_dir)
+            generate_ui_wrapper(app.name, menu_scan.process_name, menu_scan, wrapper_dir, app_id=app.app_id)
         except Exception as e:
             error(t("install.gen_failed", error=e))
             sys.exit(1)
@@ -334,11 +297,11 @@ def install(ctx, app_name):
             error(t("install.sdef_failed", error=e))
             sys.exit(1)
         try:
-            generate_wrapper(sdef_info, wrapper_dir)
+            generate_wrapper(sdef_info, wrapper_dir, app_id=app.app_id)
         except Exception as e:
             error(t("install.gen_failed", error=e))
             sys.exit(1)
-        wrapper_info = get_wrapper_info(sdef_info)
+        wrapper_info = get_wrapper_info(sdef_info, app.app_id)
         cmd_count = len(wrapper_info["commands"])
         prop_count = len(wrapper_info["properties"])
 
@@ -469,7 +432,7 @@ def info(ctx, app_name):
         error(t("install.sdef_failed", error=e))
         sys.exit(1)
 
-    wrapper_info = get_wrapper_info(sdef_info)
+    wrapper_info = get_wrapper_info(sdef_info, app.app_id)
     commands = wrapper_info["commands"]
     properties = wrapper_info["properties"]
     nested_groups = wrapper_info["nested_groups"]
@@ -711,3 +674,53 @@ def lang(language):
     set_lang(language)
     # Re-init to use new language for this message
     click.echo(t("lang.switched", lang=language))
+
+
+@cli.command(name="mcp-setup")
+@click.option("--remove", is_flag=True, help="Unregister MCP server")
+def mcp_setup(remove):
+    """Register clam MCP server for Claude Code / 注册 MCP 服务器"""
+    import shutil
+    import subprocess
+
+    claude_bin = shutil.which("claude")
+    if not claude_bin:
+        error(t("mcp.no_claude"))
+        sys.exit(1)
+
+    if remove:
+        result = subprocess.run(
+            [claude_bin, "mcp", "remove", "-s", "user", "clam"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            success(t("mcp.removed"))
+        else:
+            error(t("mcp.not_registered"))
+        return
+
+    # Check if already registered
+    result = subprocess.run(
+        [claude_bin, "mcp", "list"],
+        capture_output=True, text=True,
+    )
+    if "clam" in result.stdout and "Connected" in result.stdout:
+        success(t("mcp.already"))
+        return
+
+    # Find clam-mcp binary
+    clam_mcp_bin = shutil.which("clam-mcp")
+    if not clam_mcp_bin:
+        error(t("mcp.failed", error="clam-mcp not found on PATH"))
+        sys.exit(1)
+
+    status(t("mcp.registering"))
+    result = subprocess.run(
+        [claude_bin, "mcp", "add", "-s", "user", "clam", "--", clam_mcp_bin],
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        success(t("mcp.success"))
+    else:
+        msg = result.stderr.strip() or result.stdout.strip()
+        error(t("mcp.failed", error=msg))

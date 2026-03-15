@@ -313,5 +313,55 @@ def get_{{ group.func_name }}(ctx: click.Context) -> None:
 {% endfor %}
 
 
+{% if list_commands %}
+
+# ── Collection list commands ──────────────────────────────────────────────────
+{% for lc in list_commands %}
+
+@cli.command(name="list-{{ lc.prop_cli_name }}-{{ lc.element_plural | replace(' ', '-') }}")
+{% if lc.filter_prop %}
+@click.option("--{{ lc.filter_label }}", is_flag=True, default=False, help="Only show {{ lc.filter_label }} {{ lc.element_plural }}.")
+{% endif %}
+@click.pass_context
+def list_{{ lc.prop_func_name }}_{{ lc.element_func }}(ctx{% if lc.filter_prop %}, {{ lc.filter_label }}{% endif %}) -> None:
+    """List {{ lc.element_plural }} in {{ lc.prop_name }}."""
+{% if lc.filter_prop %}
+    filter_clause = " whose {{ lc.filter_prop }} is {{ lc.filter_value }}" if {{ lc.filter_label }} else ""
+{% else %}
+    filter_clause = ""
+{% endif %}
+    script = (
+        'tell application "{{ app_name }}"\n'
+        + f'    set theList to every {{ lc.element_type }} of {{ lc.prop_name }}{filter_clause}\n'
+        + '    set output to ""\n'
+        + '    repeat with obj in theList\n'
+        + '        try\n'
+        + '            set row to {% for kp in lc.key_props %}{% if kp.needs_cast %}(({{ kp.as_name }} of obj) as text){% else %}({{ kp.as_name }} of obj as text){% endif %}{% if not loop.last %} & "\\t" & {% endif %}{% endfor %}\n'
+        + '            set output to output & row & linefeed\n'
+        + '        end try\n'
+        + '    end repeat\n'
+        + '    return output\n'
+        + 'end tell'
+    )
+    raw = _run_applescript(script)
+    if ctx.obj.get("json"):
+        rows = [r for r in raw.split("\n") if r.strip()]
+        results = []
+        for row in rows:
+            parts = row.split("\t")
+            results.append({
+{% for kp in lc.key_props %}
+                "{{ kp.dict_key }}": parts[{{ loop.index0 }}] if len(parts) > {{ loop.index0 }} else "",
+{% endfor %}
+            })
+        click.echo(json.dumps(results, ensure_ascii=False, indent=2))
+    else:
+        for row in raw.split("\n"):
+            if row.strip():
+                parts = row.split("\t")
+                click.echo("  " + " | ".join(parts))
+{% endfor %}
+{% endif %}
+
 if __name__ == "__main__":
     cli()

@@ -11,8 +11,15 @@ from jinja2 import Environment, FileSystemLoader
 
 from clam.generator.specifier_defaults import get_specifier_default
 from clam.i18n import get_template_i18n, t
-from clam.scanner.menu_scanner import MenuGroup, MenuItem, MenuScanResult
-from clam.scanner.sdef_parser import SdefCommand, SdefEnumeration, SdefInfo, SdefProperty
+from clam.scanner.menu_scanner import MenuItem, MenuScanResult
+from clam.scanner.sdef_parser import (
+    SdefCommand,
+    SdefElement,
+    SdefEnumeration,
+    SdefInfo,
+    SdefProperty,
+    _to_func_name,
+)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -65,6 +72,25 @@ class TemplateNestedGroup:
     class_name: str      # "track"
     properties: list[TemplateProperty]  # all non-hidden class properties
 
+@dataclass
+class TemplateListKeyProp:
+    as_name: str       # AppleScript property name (e.g., "date received")
+    dict_key: str      # dict key for JSON output (e.g., "date_received")
+    needs_cast: bool   # True for date/complex types that need "as text"
+
+@dataclass
+class TemplateListCommand:
+    prop_name: str          # app property AS name (e.g., "inbox")
+    prop_cli_name: str      # CLI name (e.g., "inbox")
+    prop_func_name: str     # Python func name (e.g., "inbox")
+    element_type: str       # element AS name (e.g., "message")
+    element_plural: str     # plural for CLI (e.g., "messages")
+    element_func: str       # Python func name plural (e.g., "messages")
+    key_props: list[TemplateListKeyProp]
+    filter_prop: str | None    # filter property AS name (e.g., "read status") or None
+    filter_label: str | None   # CLI flag name (e.g., "unread") or None
+    filter_value: str | None   # AppleScript filter value (e.g., "false") or None
+
 # Max properties per nested group compound command
 MAX_COMPOUND_PROPS = 25
 
@@ -95,6 +121,11 @@ def _safe_func_name(name: str) -> str:
     return func_name
 
 
+def _safe_desc(text: str) -> str:
+    """将描述文本中的双引号替换为单引号，避免嵌入 Python docstring/string 时产生语法错误。"""
+    return text.replace('"', "'")
+
+
 def _should_include_command(cmd: SdefCommand) -> bool:
     """只跳过 hidden 和 standard suite 命令，不再按类型过滤。"""
     return not cmd.is_standard_suite and not cmd.hidden
@@ -119,7 +150,7 @@ def _build_template_commands(
                 params.append(TemplateParam(
                     cli_name=cli_name,
                     func_name=func_name,
-                    description=p.description,
+                    description=_safe_desc(p.description),
                     is_flag=True,
                     choices=None,
                     as_name=p.name,
@@ -129,7 +160,7 @@ def _build_template_commands(
                 params.append(TemplateParam(
                     cli_name=cli_name,
                     func_name=func_name,
-                    description=p.description,
+                    description=_safe_desc(p.description),
                     is_flag=False,
                     choices=repr(enum_map[p.type]),
                     as_name=p.name,
@@ -139,7 +170,7 @@ def _build_template_commands(
                 params.append(TemplateParam(
                     cli_name=cli_name,
                     func_name=func_name,
-                    description=p.description,
+                    description=_safe_desc(p.description),
                     is_flag=False,
                     choices=None,
                     as_name=p.name,
@@ -159,7 +190,7 @@ def _build_template_commands(
             name=cmd.name,
             cli_name=cmd.cli_name,
             func_name=cmd.func_name,
-            description=cmd.description,
+            description=_safe_desc(cmd.description),
             direct_param=has_dp,
             direct_optional=dp_optional,
             direct_type=dp_type,
@@ -188,7 +219,7 @@ def _build_template_properties(
             cli_name=prop.cli_name,
             func_name=prop.func_name,
             as_name=prop.name,
-            description_short=prop.description or prop.name,
+            description_short=_safe_desc(prop.description or prop.name),
             access=prop.access,
             value_type=value_type,
             choices=choices,
@@ -303,12 +334,125 @@ def check_command_support(sdef_info: SdefInfo, app_id: str = "") -> list[dict]:
     return results
 
 
-def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
+_LIST_KEY_PROP_PRIORITY = [
+    "subject", "name", "title", "sender", "from", "author",
+    "date received", "date sent", "date", "read status", "flagged status",
+    "size", "message size", "duration",
+]
+
+_DATE_TYPES = frozenset({"date"})
+
+
+def _pick_list_key_props(
+    elem_type: str,
+    elem_props: dict[str, "SdefProperty"],
+    max_props: int = 5,
+) -> list[TemplateListKeyProp]:
+    """Pick the most useful properties to display for a list command."""
+    chosen = []
+    seen = set()
+
+    # First pass: pick by priority order
+    for priority_name in _LIST_KEY_PROP_PRIORITY:
+        if priority_name in elem_props and priority_name not in seen:
+            prop = elem_props[priority_name]
+            if not prop.hidden:
+                chosen.append(TemplateListKeyProp(
+                    as_name=priority_name,
+                    dict_key=priority_name.replace(" ", "_"),
+                    needs_cast=prop.type in _DATE_TYPES,
+                ))
+                seen.add(priority_name)
+                if len(chosen) >= max_props:
+                    break
+
+    # Second pass: fill up with remaining text props if under max
+    if len(chosen) < max_props:
+        for prop in elem_props.values():
+            if prop.name not in seen and not prop.hidden and prop.type in ("text", "integer", "boolean"):
+                chosen.append(TemplateListKeyProp(
+                    as_name=prop.name,
+                    dict_key=prop.name.replace(" ", "_"),
+                    needs_cast=False,
+                ))
+                seen.add(prop.name)
+                if len(chosen) >= max_props:
+                    break
+
+    return chosen
+
+
+def _build_list_commands(sdef_info: "SdefInfo") -> list[TemplateListCommand]:
+    """Build list commands for app-level properties whose type has element children."""
+    # elements_by_class: class_name -> [element_type]
+    elements_by_class: dict[str, list[str]] = {}
+    for elem in sdef_info.elements:
+        elements_by_class.setdefault(elem.class_name, []).append(elem.element_type)
+
+    # props_by_class: class_name -> {prop_name: SdefProperty}
+    props_by_class: dict[str, dict[str, "SdefProperty"]] = {}
+    for prop in sdef_info.properties:
+        props_by_class.setdefault(prop.class_name, {})[prop.name] = prop
+
+    result = []
+    app_props = props_by_class.get("application", {})
+
+    seen_cmds: set[str] = set()
+
+    for prop_name, prop in app_props.items():
+        if prop.hidden or prop.access == "wo":
+            continue
+        prop_type = prop.type
+        if prop_type not in elements_by_class:
+            continue
+
+        for elem_type in elements_by_class[prop_type]:
+            # Naive pluralization
+            if elem_type.endswith("s"):
+                plural = elem_type + "es"
+            else:
+                plural = elem_type + "s"
+
+            cmd_name = f"list-{prop.cli_name}-{plural.replace(' ', '-')}"
+            if cmd_name in seen_cmds:
+                continue
+            seen_cmds.add(cmd_name)
+
+            elem_props = props_by_class.get(elem_type, {})
+            key_props = _pick_list_key_props(elem_type, elem_props)
+
+            # Detect filter (boolean status props like "read status")
+            filter_prop = None
+            filter_label = None
+            filter_value = None
+            if "read status" in elem_props:
+                filter_prop = "read status"
+                filter_label = "unread"
+                filter_value = "false"
+
+            result.append(TemplateListCommand(
+                prop_name=prop_name,
+                prop_cli_name=prop.cli_name,
+                prop_func_name=prop.func_name,
+                element_type=elem_type,
+                element_plural=plural,
+                element_func=_to_func_name(plural),
+                key_props=key_props,
+                filter_prop=filter_prop,
+                filter_label=filter_label,
+                filter_value=filter_value,
+            ))
+
+    return result
+
+
+def generate_wrapper(sdef_info: SdefInfo, output_dir: Path, app_id: str = "") -> Path:
     """生成可 pip install 的 CLI wrapper 包。
 
     Args:
         sdef_info: 解析后的 sdef 数据。
         output_dir: 输出目录。
+        app_id: 规范化的应用 ID（ASCII），用于包名和入口点。
 
     Returns:
         输出目录路径。
@@ -316,7 +460,8 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     enum_map = _build_enum_map(sdef_info.enumerations)
-    app_id = sdef_info.app_name.lower().replace(" ", "-")
+    if not app_id:
+        app_id = sdef_info.app_name.lower().replace(" ", "-")
 
     app_props = [p for p in sdef_info.properties if p.class_name == "application"]
 
@@ -327,6 +472,7 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
     commands = _build_template_commands(sdef_info.commands, enum_map, app_id)
     app_properties = _build_template_properties(simple_props, enum_map)
     nested_groups = _build_nested_groups(app_props, sdef_info.properties, enum_map)
+    list_commands = _build_list_commands(sdef_info)
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -354,6 +500,7 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
         nested_groups=nested_groups,
         max_compound_props=MAX_COMPOUND_PROPS,
         i18n=i18n,
+        list_commands=list_commands,
     )
     cli_path = output_dir / f"{module_name}.py"
     cli_path.write_text(cli_code, encoding="utf-8")
@@ -375,11 +522,12 @@ def generate_wrapper(sdef_info: SdefInfo, output_dir: Path) -> Path:
     return output_dir
 
 
-def generate_basic_wrapper(app_name: str, output_dir: Path) -> Path:
+def generate_basic_wrapper(app_name: str, output_dir: Path, app_id: str = "") -> Path:
     """为无 .sdef 的应用生成基础模式 CLI wrapper（仅标准套件命令）。"""
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    app_id = app_name.lower().replace(" ", "-")
+    if not app_id:
+        app_id = app_name.lower().replace(" ", "-")
     module_name = f"cli_{app_id.replace('-', '_')}"
 
     env = Environment(
@@ -566,11 +714,13 @@ def generate_ui_wrapper(
     process_name: str,
     scan_result: MenuScanResult,
     output_dir: Path,
+    app_id: str = "",
 ) -> Path:
     """生成基于 UI Scripting 的 CLI wrapper（通过菜单点击控制应用）。"""
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    app_id = app_name.lower().replace(" ", "-")
+    if not app_id:
+        app_id = app_name.lower().replace(" ", "-")
     module_name = f"cli_{app_id.replace('-', '_')}"
 
     menu_groups = _build_template_menu_groups(scan_result)

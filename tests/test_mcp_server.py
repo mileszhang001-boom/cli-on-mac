@@ -4,6 +4,7 @@ import json
 
 from clam.mcp_server import (
     clam_doctor,
+    clam_find_app,
     clam_info,
     clam_scan,
 )
@@ -13,12 +14,12 @@ class TestToolRegistration:
     def test_all_tools_registered(self):
         from clam.mcp_server import mcp
         tools = mcp._tool_manager._tools
-        expected = {"clam_scan", "clam_info", "clam_install", "clam_execute", "clam_doctor"}
+        expected = {"clam_scan", "clam_info", "clam_install", "clam_execute", "clam_doctor", "clam_find_app"}
         assert set(tools.keys()) == expected
 
     def test_tool_count(self):
         from clam.mcp_server import mcp
-        assert len(mcp._tool_manager._tools) == 5
+        assert len(mcp._tool_manager._tools) == 6
 
 
 class TestScanTool:
@@ -100,3 +101,59 @@ class TestExecuteTool:
         data = json.loads(result)
         assert "error" in data
         assert "未安装" in data["error"]
+
+
+class TestFindAppTool:
+    def test_find_app_music_english(self):
+        result = clam_find_app("music")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert data["best_match"]["app_id"] == "music"
+
+    def test_find_app_qqmusic_chinese(self):
+        result = clam_find_app("QQ音乐")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert data["best_match"]["app_id"] == "qqmusic"
+
+    def test_find_app_wechat_chinese(self):
+        result = clam_find_app("微信")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert data["best_match"]["app_id"] == "wechat"
+
+    def test_find_app_chrome_fuzzy(self):
+        result = clam_find_app("chrome")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert data["best_match"]["app_id"] == "google-chrome"
+
+    def test_find_app_calendar_chinese(self):
+        result = clam_find_app("日历")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert data["best_match"]["app_id"] == "calendar"
+
+    def test_find_app_not_found_returns_suggestions(self):
+        result = clam_find_app("xyzzy_nonexistent_9999")
+        data = json.loads(result)
+        assert data["found"] is False
+        assert "suggestions" in data
+
+    def test_find_app_installed_flag_is_bool(self):
+        result = clam_find_app("music")
+        data = json.loads(result)
+        assert isinstance(data["best_match"]["installed"], bool)
+
+    def test_find_app_has_workflow(self):
+        result = clam_find_app("spotify")
+        data = json.loads(result)
+        assert data["found"] is True
+        assert "workflow" in data
+        assert "clam_execute" in data["workflow"] or "clam_install" in data["workflow"]
+
+    def test_find_app_present_on_mac_flag(self):
+        # Music.app is always present on macOS
+        result = clam_find_app("music")
+        data = json.loads(result)
+        assert isinstance(data["best_match"]["present_on_mac"], bool)

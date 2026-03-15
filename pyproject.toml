@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clam-mac"
-version = "0.1.0"
+version = "0.2.0"
 description = "Give any AI Agent hands to control your Mac — auto-discover apps, generate CLI wrappers, return structured JSON."
 requires-python = ">=3.10"
 license = "MIT"

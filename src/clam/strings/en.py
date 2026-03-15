@@ -87,6 +87,16 @@ STRINGS: dict[str, str] = {
     "lang.current": "Current language: {lang}",
     "lang.switched": "Language set to: {lang}",
 
+    # ── mcp-setup ─────────────────────────────────────────────────────────────
+    "mcp.checking": "Checking Claude Code installation…",
+    "mcp.no_claude": "Claude Code (claude) not found on PATH.\nInstall it first: https://claude.ai/download",
+    "mcp.registering": "Registering clam MCP server (user scope)…",
+    "mcp.success": "clam MCP server registered globally.\nRestart Claude Code to activate. All clam commands are now available to AI.",
+    "mcp.already": "clam MCP server is already registered.",
+    "mcp.failed": "Registration failed: {error}",
+    "mcp.removed": "clam MCP server unregistered.",
+    "mcp.not_registered": "clam MCP server is not registered.",
+
     # ── errors ──────────────────────────────────────────────────────────────────
     "err.app_not_found": "App not found: {name}, did you mean: {suggestions}",
     "err.app_not_found_generic": "App not found: {name}, run clam scan to see available apps",

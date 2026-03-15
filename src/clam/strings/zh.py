@@ -87,6 +87,16 @@ STRINGS: dict[str, str] = {
     "lang.current": "当前语言: {lang}",
     "lang.switched": "语言已设置为: {lang}",
 
+    # ── mcp-setup ─────────────────────────────────────────────────────────────
+    "mcp.checking": "检查 Claude Code 安装状态…",
+    "mcp.no_claude": "未找到 Claude Code (claude)。\n请先安装: https://claude.ai/download",
+    "mcp.registering": "注册 clam MCP 服务器（全局）…",
+    "mcp.success": "clam MCP 服务器已全局注册。\n重启 Claude Code 即可使用，AI 现在可以调用所有 clam 命令。",
+    "mcp.already": "clam MCP 服务器已注册。",
+    "mcp.failed": "注册失败: {error}",
+    "mcp.removed": "clam MCP 服务器已注销。",
+    "mcp.not_registered": "clam MCP 服务器未注册。",
+
     # ── errors ──────────────────────────────────────────────────────────────────
     "err.app_not_found": "未找到应用: {name}，你是不是想找: {suggestions}",
     "err.app_not_found_generic": "未找到应用: {name}，运行 clam scan 查看可用应用",
