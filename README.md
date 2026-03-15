@@ -30,7 +30,7 @@ Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that —
 <img src="assets/demo-getting-started.jpg" width="100%">
 </a>
 </td>
-<td valign="top" width="55%">
+<td valign="middle" width="55%">
 <strong>🚀 Three Commands, 10 Seconds, Any App</strong><br><br>
 <code>pip install clam-mac</code> → <code>clam scan</code> → <code>clam install</code> — and any Mac app is AI-controllable. Watch CLAM auto-discover 50+ apps and configure MCP in one go.
 </td>
@@ -42,7 +42,7 @@ Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that —
 <img src="assets/demo-email.jpg" width="100%">
 </a>
 </td>
-<td valign="top" width="55%">
+<td valign="middle" width="55%">
 <strong>📧 AI Reads Your Email — No API Key Needed</strong><br><br>
 Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAuth, no Gmail API, no hacks.
 </td>
@@ -54,7 +54,7 @@ Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAu
 <img src="assets/demo-calendar.jpg" width="100%">
 </a>
 </td>
-<td valign="top" width="55%">
+<td valign="middle" width="55%">
 <strong>📅 Daily Briefing in One Prompt</strong><br><br>
 "What's on my plate today?" — AI reads Calendar + Reminders and hands you a to-do list. Zero copy-paste.
 </td>
@@ -66,7 +66,7 @@ Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAu
 <img src="assets/demo-spotify.jpg" width="100%">
 </a>
 </td>
-<td valign="top" width="55%">
+<td valign="middle" width="55%">
 <strong>🎵 Control Spotify from Your AI Chat</strong><br><br>
 Say "我想听稻香" — it just works. AI plays, pauses, skips, queries. Voice-control your music, zero config.
 </td>
