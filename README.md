@@ -25,34 +25,49 @@ Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that —
 
 <table>
 <tr>
-<td align="center" width="50%">
+<td width="45%">
 <a href="https://youtu.be/LBmZHGgEl9I">
-<img src="assets/demo-getting-started.jpg" alt="CLAM Getting Started — pip install, scan apps, generate CLI wrappers in one command" width="100%">
+<img src="assets/demo-getting-started.jpg" width="100%">
 </a>
-<br><strong>🚀 Three Commands, 10 Seconds, Any App</strong><br>
+</td>
+<td valign="top" width="55%">
+<strong>🚀 Three Commands, 10 Seconds, Any App</strong><br><br>
 <code>pip install clam-mac</code> → <code>clam scan</code> → <code>clam install</code> — and any Mac app is AI-controllable. Watch CLAM auto-discover 50+ apps and configure MCP in one go.
 </td>
-<td align="center" width="50%">
+</tr>
+<tr><td colspan="2"><br></td></tr>
+<tr>
+<td width="45%">
 <a href="https://youtu.be/G1IOv1YUPQU">
-<img src="assets/demo-email.jpg" alt="AI reads and organizes Mac Mail — CLAM email automation demo" width="100%">
+<img src="assets/demo-email.jpg" width="100%">
 </a>
-<br><strong>📧 AI Reads Your Email — No API Key Needed</strong><br>
+</td>
+<td valign="top" width="55%">
+<strong>📧 AI Reads Your Email — No API Key Needed</strong><br><br>
 Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAuth, no Gmail API, no hacks.
 </td>
 </tr>
+<tr><td colspan="2"><br></td></tr>
 <tr>
-<td align="center" width="50%">
+<td width="45%">
 <a href="https://youtu.be/3WD85V0U4eo">
-<img src="assets/demo-calendar.jpg" alt="AI generates daily briefing from Calendar and Reminders — CLAM demo" width="100%">
+<img src="assets/demo-calendar.jpg" width="100%">
 </a>
-<br><strong>📅 Daily Briefing in One Prompt</strong><br>
+</td>
+<td valign="top" width="55%">
+<strong>📅 Daily Briefing in One Prompt</strong><br><br>
 "What's on my plate today?" — AI reads Calendar + Reminders and hands you a to-do list. Zero copy-paste.
 </td>
-<td align="center" width="50%">
+</tr>
+<tr><td colspan="2"><br></td></tr>
+<tr>
+<td width="45%">
 <a href="https://youtu.be/P95UukSavsI">
-<img src="assets/demo-spotify.jpg" alt="Control Spotify from AI chat — CLAM music automation demo" width="100%">
+<img src="assets/demo-spotify.jpg" width="100%">
 </a>
-<br><strong>🎵 Control Spotify from Your AI Chat</strong><br>
+</td>
+<td valign="top" width="55%">
+<strong>🎵 Control Spotify from Your AI Chat</strong><br><br>
 Say "我想听稻香" — it just works. AI plays, pauses, skips, queries. Voice-control your music, zero config.
 </td>
 </tr>
