@@ -1,6 +1,7 @@
 """Tests for clam CLI commands — 使用 CliRunner。"""
 
 import json
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -48,6 +49,10 @@ class TestScan:
         ids = {app["app_id"] for app in data}
         assert "finder" in ids
 
+    @pytest.mark.skipif(
+        not Path("/Applications/Figma.app").exists(),
+        reason="Figma not installed on this machine",
+    )
     def test_scan_json_figma_present(self, runner):
         result = runner.invoke(cli, ["--json", "scan"])
         data = json.loads(result.output)
@@ -61,6 +66,10 @@ class TestScan:
         assert finder["commands"] > 0
         assert finder["mode"] == "full"
 
+    @pytest.mark.skipif(
+        not Path("/Applications/Figma.app").exists(),
+        reason="Figma not installed on this machine",
+    )
     def test_scan_json_figma_is_ui_mode(self, runner):
         result = runner.invoke(cli, ["--json", "scan"])
         data = json.loads(result.output)

@@ -71,10 +71,18 @@ class TestFinderAndFigma:
         assert finder.sdef_path.endswith(".sdef")
         assert not finder.basic_mode
 
+    @pytest.mark.skipif(
+        not Path("/Applications/Figma.app").exists(),
+        reason="Figma not installed on this machine",
+    )
     def test_scan_finds_figma(self, scanned_apps):
         ids = {a.app_id for a in scanned_apps}
         assert "figma" in ids
 
+    @pytest.mark.skipif(
+        not Path("/Applications/Figma.app").exists(),
+        reason="Figma not installed on this machine",
+    )
     def test_figma_is_basic_mode(self, scanned_apps):
         figma = next(a for a in scanned_apps if a.app_id == "figma")
         assert figma.basic_mode
@@ -85,6 +93,10 @@ class TestFinderAndFigma:
         assert app is not None
         assert app.name == "Finder"
 
+    @pytest.mark.skipif(
+        not Path("/Applications/Figma.app").exists(),
+        reason="Figma not installed on this machine",
+    )
     def test_find_basic_app_figma(self):
         app = find_basic_app("figma")
         assert app is not None
@@ -110,10 +122,12 @@ class TestExpandedDetection:
     def test_scan_finds_ui_apps(self, scanned_apps):
         """UI apps that are installed should appear in scan results."""
         ids = {a.app_id for a in scanned_apps}
-        # At least some of the UI apps should be found (machine-dependent)
         ui_ids = {entry[1] for entry in _KNOWN_UI_APPS}
         found = ids & ui_ids
-        assert len(found) >= 1, "No UI apps found on this machine"
+        # Machine-dependent: skip if none installed (e.g. CI runner)
+        if len(found) == 0:
+            pytest.skip("No known UI apps installed on this machine")
+        assert len(found) >= 1
 
     def test_ui_apps_have_correct_process_name(self, scanned_apps):
         """UI apps should store their process_name."""
