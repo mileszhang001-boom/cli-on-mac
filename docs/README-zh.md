@@ -53,7 +53,7 @@
 <img src="../assets/demo-spotify.jpg" alt="AI 控制 Spotify 演示" width="100%">
 </a>
 <br><strong>🎵 用 AI 对话控制 Spotify</strong><br>
-说"放点爵士乐"—— 就这么简单。AI 控制播放、暂停、切歌，零配置。
+说"我想听稻香"—— 就这么简单。AI 控制播放、暂停、切歌，零配置。
 </td>
 </tr>
 </table>

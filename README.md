@@ -53,7 +53,7 @@ Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAu
 <img src="assets/demo-spotify.jpg" alt="Control Spotify from AI chat — CLAM music automation demo" width="100%">
 </a>
 <br><strong>🎵 Control Spotify from Your AI Chat</strong><br>
-Say "play some jazz" — it just works. AI plays, pauses, skips, queries. Voice-control your music, zero config.
+Say "我想听稻香" — it just works. AI plays, pauses, skips, queries. Voice-control your music, zero config.
 </td>
 </tr>
 </table>
