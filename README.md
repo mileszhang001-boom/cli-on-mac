@@ -29,15 +29,15 @@ Your Mac has dozens of apps, but AI can't touch any of them. CLAM fixes that —
 <a href="https://youtu.be/LBmZHGgEl9I">
 <img src="assets/demo-getting-started.jpg" alt="CLAM Getting Started — pip install, scan apps, generate CLI wrappers in one command" width="100%">
 </a>
-<br><strong>🚀 Getting Started with CLAM</strong><br>
-<code>pip install clam-mac</code> → <code>clam scan</code> → <code>clam install</code> — three commands to turn any Mac app into a CLI tool. See how CLAM auto-discovers 50+ apps, generates typed wrappers with structured JSON output, and configures MCP for AI agents.
+<br><strong>🚀 Three Commands, 10 Seconds, Any App</strong><br>
+<code>pip install clam-mac</code> → <code>clam scan</code> → <code>clam install</code> — and any Mac app is AI-controllable. Watch CLAM auto-discover 50+ apps and configure MCP in one go.
 </td>
 <td align="center" width="50%">
 <a href="https://youtu.be/G1IOv1YUPQU">
 <img src="assets/demo-email.jpg" alt="AI reads and organizes Mac Mail — CLAM email automation demo" width="100%">
 </a>
 <br><strong>📧 AI Reads Your Email — No API Key Needed</strong><br>
-Ask your AI "what unread emails do I have?" and watch it read Apple Mail in real time. CLAM generates a CLI wrapper for Mail.app, letting any AI agent list, search, and organize your inbox — no OAuth, no Gmail API, no browser automation.
+Ask "what unread emails do I have?" — AI reads Apple Mail in real time. No OAuth, no Gmail API, no hacks.
 </td>
 </tr>
 <tr>
@@ -45,15 +45,15 @@ Ask your AI "what unread emails do I have?" and watch it read Apple Mail in real
 <a href="https://youtu.be/3WD85V0U4eo">
 <img src="assets/demo-calendar.jpg" alt="AI generates daily briefing from Calendar and Reminders — CLAM demo" width="100%">
 </a>
-<br><strong>📅 Daily Briefing — Calendar + Reminders in One Prompt</strong><br>
-"What's on my plate today?" — the AI reads your Calendar events and Reminders, then generates a concise daily to-do list. No copy-pasting, no switching apps. CLAM bridges the gap between your native Mac apps and any AI agent.
+<br><strong>📅 Daily Briefing in One Prompt</strong><br>
+"What's on my plate today?" — AI reads Calendar + Reminders and hands you a to-do list. Zero copy-paste.
 </td>
 <td align="center" width="50%">
 <a href="https://youtu.be/P95UukSavsI">
 <img src="assets/demo-spotify.jpg" alt="Control Spotify from AI chat — CLAM music automation demo" width="100%">
 </a>
 <br><strong>🎵 Control Spotify from Your AI Chat</strong><br>
-"Play some jazz" — and it just works. CLAM wraps Spotify's scripting interface so your AI can play, pause, skip tracks, and read what's currently playing. The fastest way to voice-control your music through any AI agent.
+Say "play some jazz" — it just works. AI plays, pauses, skips, queries. Voice-control your music, zero config.
 </td>
 </tr>
 </table>
