@@ -53,22 +53,12 @@ Fuzzy matching built in: `chrome` → `google-chrome`, `word` → `microsoft-wor
 
 ### Claude Code (MCP)
 
-**Recommended setup** — install into a dedicated venv, then point Claude at the binary:
-
 ```bash
-python3 -m venv ~/clam-env
-source ~/clam-env/bin/activate
 pip install clam-mac
-claude mcp add clam -- ~/clam-env/bin/clam-mcp
+clam mcp-setup
 ```
 
-Or, if `clam-mcp` is already on your PATH (venv activated):
-
-```bash
-claude mcp add clam -- clam-mcp
-```
-
-Restart Claude Code, then just ask:
+That's it — `clam mcp-setup` auto-detects the `clam-mcp` binary and registers it with Claude Code. Restart Claude Code, then just ask:
 
 > "Set volume to 50 and tell me what song is playing"
 > "List my unread emails"

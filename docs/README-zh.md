@@ -53,22 +53,12 @@ clam-mail list-inbox-messages --unread # 列出未读邮件
 
 ### Claude Code（MCP）
 
-**推荐方式** — 安装到独立 venv，再把二进制路径告诉 Claude：
-
 ```bash
-python3 -m venv ~/clam-env
-source ~/clam-env/bin/activate
 pip install clam-mac
-claude mcp add clam -- ~/clam-env/bin/clam-mcp
+clam mcp-setup
 ```
 
-或者，如果 `clam-mcp` 已在 PATH 中（已激活 venv）：
-
-```bash
-claude mcp add clam -- clam-mcp
-```
-
-重启 Claude Code 后直接说：
+`clam mcp-setup` 会自动找到 `clam-mcp` 二进制并注册到 Claude Code，无需手动配置路径。重启 Claude Code 后直接说：
 
 > "帮我把音量调到 50，告诉我现在在放什么歌"
 > "列出我的未读邮件"
